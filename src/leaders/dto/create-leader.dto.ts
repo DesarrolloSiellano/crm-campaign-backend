@@ -1,0 +1,32 @@
+export class CreateLeaderDto {
+    _id?: string;
+    nombres: string;
+    apellidos: string;
+    tipoDocumento: string;
+    numeroDocumento: string;
+    celular: string;
+    telefono?: string;
+    email?: string;
+    nickname?: string;
+    lat?: string;
+    lng?: string;
+    fechaNacimiento: string;
+    sexo: string;
+    direccion: string;
+    comuna: string;
+    barrio: string;
+    vereda?: string;
+    corregimiento?: string;
+    ciudad: string;
+    tipoLider: string;
+    urlFoto: string;
+    zonaInfluencia: string;
+    numeroVotantes: string;
+    fechaCreacion?: string;
+    fechaModificacion?: string;
+    horaModificacion?: string;
+    horaCreacion?: string;
+    idUserModificacion?: string;
+    isUserModule?: boolean;
+    idUser: string;
+}
