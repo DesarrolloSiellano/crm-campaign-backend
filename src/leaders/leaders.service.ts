@@ -89,11 +89,67 @@ export class LeadersService {
 }
 
 
-  update(id: number, updateLeaderDto: UpdateLeaderDto) {
-    return `This action updates a #${id} leader`;
+  async update(id: string, updateLeaderDto: UpdateLeaderDto) {
+    
+    try {
+      const result = await this.leaderModel.findByIdAndUpdate(
+        id,
+        updateLeaderDto,
+        { new: true, runValidators: true },
+      );
+      if (!result) {
+        throw new NotFoundException('Leader not found');
+      }
+      if(!id) {
+        throw new BadRequestException('id is required param');
+      }
+      return {
+        message: 'Leader updated successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: [result],
+        meta: {
+          totalData: 1,
+          updatedAt: new Date().toISOString(),
+          id: result._id,
+        },
+      };
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new BadRequestException(
+          'Duplicate key error: Leader already exists ' +
+            JSON.stringify(error.keyValue),
+        );
+      }
+      throw new BadRequestException('Error updating leader: ' + error.message);
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} leader`;
+  async remove(id: string) {
+    console.log('id', id);
+    
+    try {
+      const result = await this.leaderModel.findByIdAndDelete(id);
+      if (!result) {
+        throw new NotFoundException('Leader not found');
+      }
+      if(!id) {
+        throw new BadRequestException('id is required param');
+      }
+      return {
+        message: 'Leader deleted successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: [result],
+        meta: {
+          totalData: 1,
+          deletedAt: new Date().toISOString(),
+          id: result._id,
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException('Error deleting leader: ' + error.message);
+    }
   }
 }
+

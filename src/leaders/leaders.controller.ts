@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put } from '@nestjs/common';
 import { LeadersService } from './leaders.service';
 import { CreateLeaderDto } from './dto/create-leader.dto';
 import { UpdateLeaderDto } from './dto/update-leader.dto';
+
+//TODO: organizar la documentacion swagger
 
 @Controller('leaders')
 export class LeadersController {
@@ -37,13 +39,15 @@ export class LeadersController {
   }
 
 
-  @Patch(':id')
+  @Put(':id')
   update(@Param('id') id: string, @Body() updateLeaderDto: UpdateLeaderDto) {
-    return this.leadersService.update(+id, updateLeaderDto);
+    return this.leadersService.update(id, updateLeaderDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.leadersService.remove(+id);
+    console.log('Removing leader with ID:', id);
+    
+    return this.leadersService.remove(id);
   }
 }
