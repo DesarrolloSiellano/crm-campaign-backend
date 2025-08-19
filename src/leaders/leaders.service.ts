@@ -23,10 +23,9 @@ export class LeadersService {
       await result.save();
 
       if (!result) {
-        throw new NotFoundException('Role not created');
+        throw new NotFoundException('Leader not created');
       }
 
-      console.log('result', result);
 
       return {
         message: 'Leader created successfully',
@@ -51,12 +50,36 @@ export class LeadersService {
     }
   }
 
-  findAll() {
-    return `This action returns all leaders`;
+  async findAll() {
+    const result = await  this.leaderModel.find();
+    if (!result || result.length === 0) {
+      throw new NotFoundException('No leader found');
+    }
+    return {
+      message: 'Leaders found',
+      statusCode: 200,
+      status: 'Success',
+      data: result,
+      meta: {
+        totalData: result.length,
+      },
+    };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} leader`;
+  async findOne(id: number) {
+    const result = await this.leaderModel.findById(id);
+    if (!result) {
+      throw new NotFoundException('Leader not found by id');
+    } 
+    return {
+      message: 'Leader found',
+      statusCode: 200,
+      status: 'Success',
+      data: result,
+      meta: {
+        totalData: 1,
+      },
+    };
   }
 
   async findByPage(from?: number, limit?: number, global?: any, filters?: any) {

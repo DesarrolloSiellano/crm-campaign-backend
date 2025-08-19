@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
 import { PopulationSchema } from 'src/population/entities/population.entity';
 import { LeaderSchema } from 'src/leaders/entities/leader.entity';
+import { MultilevelSchema } from 'src/multilevel/entities/multilevel.entity';
 
 
 @Global()
@@ -18,6 +19,7 @@ import { LeaderSchema } from 'src/leaders/entities/leader.entity';
     MongooseModule.forFeature([
       { name: 'Population', schema: PopulationSchema },
       { name: 'Leader', schema: LeaderSchema },
+      { name: 'Multilevel', schema: MultilevelSchema },
     ]),
   ],
   exports: [MongooseModule]
