@@ -21,6 +21,22 @@ export class MultilevelService {
       if(createMultilevelDto.level !== 1){
         createMultilevelDto.level = createMultilevelDto.level + 1
       }
+      
+      if(createMultilevelDto.level === 1){
+        createMultilevelDto.levelShow = '1' 
+      }
+
+      if(createMultilevelDto.level === 2){
+        createMultilevelDto.levelShow = '2' 
+      }
+
+      if(createMultilevelDto.level === 3){
+        createMultilevelDto.levelShow = '3' 
+      }
+
+      if(createMultilevelDto.level === 4 || createMultilevelDto.level > 4){
+        createMultilevelDto.levelShow = '4' 
+      }
 
       const result = new this.multilevelModel(createMultilevelDto);
       await result.save();
@@ -81,6 +97,23 @@ export class MultilevelService {
       data: result,
       meta: {
         totalData: 1,
+      },
+    };
+  }
+
+  async findByWhatsapp(whatsapp: string) {
+    const result = await this.multilevelModel.findOne({ whatsapp });
+    if (!result) {
+      throw new NotFoundException('Multilevel not found by whatsapp');
+    }
+    return {
+      message: 'Multilevel found',
+      statusCode: 200,
+      status: 'Success',
+      data: [result],
+      meta: {
+        totalData: 1,
+        idMultilevel: result._id
       },
     };
   }

@@ -8,37 +8,77 @@ import { UpdateLeaderDto } from './dto/update-leader.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Leader } from './entities/leader.entity';
-import { log } from 'console';
+import { Multilevel } from 'src/multilevel/entities/multilevel.entity';
 
 @Injectable()
 export class LeadersService {
   constructor(
     @InjectModel('Leader') private readonly leaderModel: Model<Leader>,
+    @InjectModel('Multilevel')
+    private readonly multilevelModel: Model<Multilevel>,
   ) {}
   async create(createLeaderDto: CreateLeaderDto) {
-
     try {
-
-      const result =  new this.leaderModel(createLeaderDto);
-      await result.save();
+      const result = new this.leaderModel(createLeaderDto);
+      await result.save();      
 
       if (!result) {
         throw new NotFoundException('Leader not created');
       }
 
 
-      return {
-        message: 'Leader created successfully',
-        statusCode: 201,
-        status: 'Success',
-        data: [result],
-        meta: {
-          totalData: 1,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          id: result._id,
-        },
+      const multilevelData = {
+        idInvited: result._id,
+        idParentLevel: result._id,
+        levelShow: '1',
+        profile: `Lider ${result.tipoLider}`,
+        level: 1,
+        actived: true,
+        firstName: result.nombres,
+        lastName: result.apellidos,
+        whatsapp: result.celular,
       };
+
+      const resultMultilevel = new this.multilevelModel(multilevelData);
+      await resultMultilevel.save();
+
+      let response = {};
+
+      if (resultMultilevel) {
+        response = {
+          message: 'Leader created successfully',
+          statusCode: 201,
+          status: 'Success',
+          data: [result],
+          meta: {
+            totalData: 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            idLeader: result._id,
+            idMultilevel: resultMultilevel._id,
+            multilevelMessage: 'Multilevel created successfully',
+            multilevel: resultMultilevel
+          },
+        };
+      } else {
+        response = {
+          message: 'Leader created successfully',
+          statusCode: 207,
+          status: 'Partial Success',
+          data: [result],
+          meta: {
+            totalData: 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            idLeader: result._id,
+            idMultilevel: null,
+            multilevelMessage: 'Multilevel not created',
+            multilevel: null
+          },
+        };
+      }
+
+      return response;
     } catch (error) {
       if (error.code === 11000) {
         throw new BadRequestException(
@@ -51,7 +91,7 @@ export class LeadersService {
   }
 
   async findAll() {
-    const result = await  this.leaderModel.find();
+    const result = await this.leaderModel.find();
     if (!result || result.length === 0) {
       throw new NotFoundException('No leader found');
     }
@@ -70,7 +110,7 @@ export class LeadersService {
     const result = await this.leaderModel.findById(id);
     if (!result) {
       throw new NotFoundException('Leader not found by id');
-    } 
+    }
     return {
       message: 'Leader found',
       statusCode: 200,
@@ -83,37 +123,38 @@ export class LeadersService {
   }
 
   async findByPage(from?: number, limit?: number, global?: any, filters?: any) {
-  const query: any = {};
+    const query: any = {};
 
-  // Búsqueda global en varios campos
-  if (global) {
-    query.$or = [
-      { nombres: new RegExp(global, 'i') },
-      { apellidos: new RegExp(global, 'i') },
-      { numeroDocumento: new RegExp(global, 'i') },
-      { celular: new RegExp(global, 'i') },
-      { email: new RegExp(global, 'i') },
-    ];
+    // Búsqueda global en varios campos
+    if (global) {
+      query.$or = [
+        { nombres: new RegExp(global, 'i') },
+        { apellidos: new RegExp(global, 'i') },
+        { numeroDocumento: new RegExp(global, 'i') },
+        { celular: new RegExp(global, 'i') },
+        { email: new RegExp(global, 'i') },
+      ];
+    }
+
+    const skipNumber = from && from >= 0 ? from : 0;
+    const limitNumber = limit && limit > 0 ? limit : 100;
+    const leaders = await this.leaderModel
+      .find(query)
+      .skip(skipNumber)
+      .limit(limitNumber);
+    const totalData = await this.leaderModel.countDocuments(query);
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'Leaders found',
+      data: leaders,
+      meta: {
+        totalData: totalData,
+      },
+    };
   }
 
-  const skipNumber = (from && from >= 0) ? from : 0;
-  const limitNumber = (limit && limit > 0) ? limit : 100;
-  const leaders = await this.leaderModel.find(query).skip(skipNumber).limit(limitNumber);
-  const totalData = await this.leaderModel.countDocuments(query);
-  return {
-    statusCode: 200,
-    status: 'Success',
-    message: 'Leaders found',
-    data: leaders,
-    meta: {
-      totalData: totalData,
-    },
-  };
-}
-
-
   async update(id: string, updateLeaderDto: UpdateLeaderDto) {
-    
     try {
       const result = await this.leaderModel.findByIdAndUpdate(
         id,
@@ -123,7 +164,7 @@ export class LeadersService {
       if (!result) {
         throw new NotFoundException('Leader not found');
       }
-      if(!id) {
+      if (!id) {
         throw new BadRequestException('id is required param');
       }
       return {
@@ -149,30 +190,51 @@ export class LeadersService {
   }
 
   async remove(id: string) {
-    console.log('id', id);
-    
     try {
       const result = await this.leaderModel.findByIdAndDelete(id);
+      const resultMultilevel = await this.multilevelModel.findOneAndDelete( {idInvited: id, idParentLevel: id} );
       if (!result) {
         throw new NotFoundException('Leader not found');
       }
-      if(!id) {
+      if (!id) {
         throw new BadRequestException('id is required param');
       }
-      return {
-        message: 'Leader deleted successfully',
-        statusCode: 200,
-        status: 'Success',
-        data: [result],
-        meta: {
-          totalData: 1,
-          deletedAt: new Date().toISOString(),
-          id: result._id,
-        },
-      };
+
+      let response = {}
+
+      if (resultMultilevel) {
+        response = {
+          message: 'Leader deleted successfully',
+          statusCode: 200,
+          status: 'Success',
+          data: [result],
+          meta: {
+            totalData: 1,
+            deletedAt: new Date().toISOString(),
+            id: result._id,
+            idMultilevel: resultMultilevel._id,
+            multilevel: resultMultilevel
+          },
+        };
+        
+      } else {
+        response = {
+          message: 'Leader deleted successfully but not deleted multilevel',
+          statusCode: 200,
+          status: 'Success',
+          data: [result],
+          meta: {
+            totalData: 1,
+            deletedAt: new Date().toISOString(),
+            id: result._id,
+            idMultilevel: null,
+            multilevel: null
+          },
+        };
+      }
+      return response
     } catch (error) {
       throw new BadRequestException('Error deleting leader: ' + error.message);
     }
   }
 }
-

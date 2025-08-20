@@ -14,6 +14,11 @@ export class MultilevelController {
     return this.multilevelService.create(createMultilevelDto);
   }
 
+  @Get('/findByWhatsApp/:whatsapp')
+  findByWhatsapp(@Param('whatsapp') whatsapp: string) {
+    return this.multilevelService.findByWhatsapp(whatsapp);
+  }
+
   @Get()
   findAll() {
     return this.multilevelService.findAll();

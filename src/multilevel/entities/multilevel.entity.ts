@@ -6,6 +6,7 @@ export interface Multilevel extends Document {
     idChild: string;
     levelShow: string;
     level: number;
+    profile: string;
     createdDate: string;
     createdHour: string;
     updatedDate: string;
@@ -29,6 +30,7 @@ export const MultilevelSchema = new Schema({
     idChild: { type: Schema.Types.ObjectId },
     levelShow: { type: String, require: true},
     level: { type: Number, require: true},
+    profile: { type: String, require: true},
     createdDate: { type: String, default: new Date().toISOString().split('T')[0] },
     createdHour: { type: String, default: new Date().toISOString().split('T')[1].split('.')[0] },
     updatedDate: { type: String, default: new Date().toISOString().split('T')[0] },
