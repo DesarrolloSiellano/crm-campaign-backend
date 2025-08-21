@@ -7,6 +7,8 @@ export interface Multilevel extends Document {
     levelShow: string;
     level: number;
     profile: string;
+    conditions: boolean;
+    policy: boolean;
     createdDate: string;
     createdHour: string;
     updatedDate: string;
@@ -31,6 +33,8 @@ export const MultilevelSchema = new Schema({
     levelShow: { type: String, require: true},
     level: { type: Number, require: true},
     profile: { type: String, require: true},
+    conditions: { type: Boolean},
+    policy: { type: Boolean},
     createdDate: { type: String, default: new Date().toISOString().split('T')[0] },
     createdHour: { type: String, default: new Date().toISOString().split('T')[1].split('.')[0] },
     updatedDate: { type: String, default: new Date().toISOString().split('T')[0] },

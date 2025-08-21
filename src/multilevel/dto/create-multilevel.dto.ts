@@ -5,6 +5,8 @@ export class CreateMultilevelDto {
     levelShow?: string;
     level: number;
     profile: string;
+    conditions: boolean;
+    policy: boolean;
     createdDate?: string;
     createdHour?: string;
     updatedDate?: string;

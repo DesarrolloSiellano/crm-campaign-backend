@@ -37,6 +37,8 @@ export class LeadersService {
         firstName: result.nombres,
         lastName: result.apellidos,
         whatsapp: result.celular,
+        policy: true,
+        conditions: true
       };
 
       const resultMultilevel = new this.multilevelModel(multilevelData);
