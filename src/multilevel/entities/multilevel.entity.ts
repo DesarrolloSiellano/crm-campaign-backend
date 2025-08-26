@@ -27,8 +27,8 @@ export interface Multilevel extends Document {
 }
 
 export const MultilevelSchema = new Schema({
-    idInvited: { type: Schema.Types.ObjectId, ref: 'Multilevel', required: true },
-    idParentLevel: { type: Schema.Types.ObjectId, ref: 'Multilevel', required: true },
+    idInvited: { type: Schema.Types.ObjectId, ref: 'Multilevel' },
+    idParentLevel: { type: Schema.Types.ObjectId, ref: 'Multilevel' },
     idChild: { type: Schema.Types.ObjectId },
     levelShow: { type: String, require: true},
     level: { type: Number, require: true},

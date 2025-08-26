@@ -17,29 +17,30 @@ export class MultilevelService {
     private readonly multilevelModel: Model<Multilevel>,
   ) {}
   async create(createMultilevelDto: CreateMultilevelDto) {
+    console.log('createMultilevelDto', createMultilevelDto);
+
     try {
-      if(createMultilevelDto.level !== 1){
-        createMultilevelDto.level = createMultilevelDto.level + 1
-      }
-      
-      if(createMultilevelDto.level === 1){
-        createMultilevelDto.levelShow = '1' 
+      createMultilevelDto.level = createMultilevelDto.level + 1;
+
+      if (createMultilevelDto.level === 1) {
+        createMultilevelDto.levelShow = '1';
       }
 
-      if(createMultilevelDto.level === 2){
-        createMultilevelDto.levelShow = '2' 
+      if (createMultilevelDto.level === 2) {
+        createMultilevelDto.levelShow = '2';
       }
 
-      if(createMultilevelDto.level === 3){
-        createMultilevelDto.levelShow = '3' 
+      if (createMultilevelDto.level === 3) {
+        createMultilevelDto.levelShow = '3';
       }
 
-      if(createMultilevelDto.level === 4 || createMultilevelDto.level > 4){
-        createMultilevelDto.levelShow = '4' 
+      if (createMultilevelDto.level === 4 || createMultilevelDto.level > 4) {
+        createMultilevelDto.levelShow = '4';
       }
 
       const result = new this.multilevelModel(createMultilevelDto);
       await result.save();
+      console.log('result', result);
 
       if (!result) {
         throw new NotFoundException('Multilevel not created');
@@ -113,7 +114,7 @@ export class MultilevelService {
       data: [result],
       meta: {
         totalData: 1,
-        idMultilevel: result._id
+        idMultilevel: result._id,
       },
     };
   }
@@ -149,37 +150,38 @@ export class MultilevelService {
     };
   }
 
- async update(id: string, updateMultilevelDto: UpdateMultilevelDto) {
-     try {
-       const result = await this.multilevelModel.findByIdAndUpdate(
-         id,
-         updateMultilevelDto,
-         { new: true, runValidators: true },
-       );
-       if (!result) {
-         throw new NotFoundException('Multilevel not found');
-       }
-       return {
-         message: 'Multilevel updated successfully',
-         statusCode: 200,
-         status: 'Success',
-         data: [result],
-         meta: {
-           totalData: 1,
-           updatedAt: new Date().toISOString(),
-           id: result._id,
-         },
-       };
-
-     } catch (error) {
-       if (error.code === 11000) {
-         throw new BadRequestException(
-           'Duplicate key error: Multilevel already exists ' +
-             JSON.stringify(error.keyValue),
-         );
-       }
-       throw new BadRequestException('Error updating multilevel: ' + error.message);
-     }
+  async update(id: string, updateMultilevelDto: UpdateMultilevelDto) {
+    try {
+      const result = await this.multilevelModel.findByIdAndUpdate(
+        id,
+        updateMultilevelDto,
+        { new: true, runValidators: true },
+      );
+      if (!result) {
+        throw new NotFoundException('Multilevel not found');
+      }
+      return {
+        message: 'Multilevel updated successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: [result],
+        meta: {
+          totalData: 1,
+          updatedAt: new Date().toISOString(),
+          id: result._id,
+        },
+      };
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new BadRequestException(
+          'Duplicate key error: Multilevel already exists ' +
+            JSON.stringify(error.keyValue),
+        );
+      }
+      throw new BadRequestException(
+        'Error updating multilevel: ' + error.message,
+      );
+    }
   }
 
   async remove(id: string) {
