@@ -6,6 +6,7 @@ import { PopulationModule } from './population/population.module';
 import { LeadersModule } from './leaders/leaders.module';
 import { ConfigModule } from '@nestjs/config';
 import { MultilevelModule } from './multilevel/multilevel.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { MultilevelModule } from './multilevel/multilevel.module';
     DatabaseModule,
     PopulationModule,
     LeadersModule,
-    MultilevelModule
+    MultilevelModule,
+    CampaignsModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,4 +1,6 @@
+import moment from 'moment';
 import { Schema, model, Document } from 'mongoose';
+
 
 export interface Leader extends Document {
     nombres: string;
@@ -57,10 +59,10 @@ export const LeaderSchema = new Schema({
     numeroVotantes: { type: String },
     
 
-    fechaCreacion: { type: String, default: new Date().toISOString().split('T')[0] },
-    fechaModificacion: { type: String, default: new Date().toISOString().split('T')[0] },
-    horaModificacion: { type: String, default: new Date().toISOString().split('T')[1].split('.')[0] },
-    horaCreacion: { type: String, default: new Date().toISOString().split('T')[1].split('.')[0] },
+    fechaCreacion: { type: String, default: moment().format('YYYY-MM-DD') },
+    fechaModificacion: { type: String, default: moment().format('YYYY-MM-DD') },
+    horaCreacion: { type: String, default: moment().format('HH:mm:ss') },
+    horaModificacion: { type: String, default: moment().format('HH:mm:ss') },
 
     idUserCreacion: { type: Schema.Types.ObjectId, ref: 'User' },
     idUserModificacion: { type: Schema.Types.ObjectId, ref: 'User' },

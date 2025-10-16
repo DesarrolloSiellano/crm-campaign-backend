@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { PopulationSchema } from 'src/population/entities/population.entity';
 import { LeaderSchema } from 'src/leaders/entities/leader.entity';
 import { MultilevelSchema } from 'src/multilevel/entities/multilevel.entity';
+import { CampaignSchema } from 'src/campaigns/entities/campaign.entity';
 
 
 @Global()
@@ -20,6 +21,7 @@ import { MultilevelSchema } from 'src/multilevel/entities/multilevel.entity';
       { name: 'Population', schema: PopulationSchema },
       { name: 'Leader', schema: LeaderSchema },
       { name: 'Multilevel', schema: MultilevelSchema },
+      { name: 'Campaign', schema: CampaignSchema },
     ]),
   ],
   exports: [MongooseModule]

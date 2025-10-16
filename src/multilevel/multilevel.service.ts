@@ -40,7 +40,6 @@ export class MultilevelService {
 
       const result = new this.multilevelModel(createMultilevelDto);
       await result.save();
-      console.log('result', result);
 
       if (!result) {
         throw new NotFoundException('Multilevel not created');
