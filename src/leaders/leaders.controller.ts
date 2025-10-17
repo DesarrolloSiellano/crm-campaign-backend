@@ -17,6 +17,7 @@ export class LeadersController {
 
   @Get()
   findAll() {
+
     return this.leadersService.findAll();
   }
 
@@ -36,7 +37,6 @@ export class LeadersController {
     // Convierte from y limite a número, o usa valores por defecto
     const fromNumber = from !== undefined ? Number(from) : 0;
     const limiteNumber = limite !== undefined ? Number(limite) : 10;
-
     return this.leadersService.findByPage(fromNumber, limiteNumber, global, filters);
   }
 
