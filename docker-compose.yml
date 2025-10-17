@@ -1,0 +1,16 @@
+version: "3.8"
+
+networks:
+  mongo-express_mongo_net:
+    external: true
+
+services:
+  nest_app:
+    build: .
+    container_name: nest_app_campaign_backend
+    ports:
+      - "3012:3012"
+    env_file:
+      - .env
+    networks:
+      - mongo-express_mongo_net
