@@ -32,7 +32,7 @@ jobs:
             source ~/.bashrc
 
             # Navegar al directorio del proyecto
-            cd /opt/campaign-backend
+            cd /opt/crm-campaign-backend
 
             # Configurar Git para usar SSH si es necesario
             git remote set-url origin git@github.com:${{ github.repository }}.git
