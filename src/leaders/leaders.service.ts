@@ -115,8 +115,27 @@ export class LeadersService {
         this.userClient.send({ cmd: 'createUser' }, userPayload),
       );
 
-      console.log(userResponse);
-      
+      if (userResponse.statusCode === 201 || userResponse.statusCode === 200) {
+        {
+          response = {
+            message: 'Leader created successfully',
+            statusCode: 201,
+            status: 'Success',
+            data: [result],
+            meta: {
+              totalData: 1,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              idLeader: result._id,
+              idMultilevel: resultMultilevel._id,
+              multilevelMessage: 'Multilevel created successfully',
+              multilevel: resultMultilevel,
+              userMessage: 'User created successfully',
+              user: userResponse,
+            },
+          };
+        }
+      }
 
       return response;
     } catch (error) {
