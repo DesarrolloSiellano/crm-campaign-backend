@@ -17,7 +17,6 @@ export class MultilevelService {
     private readonly multilevelModel: Model<Multilevel>,
   ) {}
   async create(createMultilevelDto: CreateMultilevelDto) {
-    console.log('createMultilevelDto', createMultilevelDto);
 
     try {
       createMultilevelDto.level = createMultilevelDto.level + 1;

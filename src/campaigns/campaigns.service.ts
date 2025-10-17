@@ -56,8 +56,26 @@ export class CampaignsService {
         },
       };
     }
+
+    async findByCompany(company: string) {      
+      const result = await this.campaignModel.find({ company: company });
+      
+      if (!result) {
+        throw new NotFoundException('Campaign not found by company');
+      }
+      return {
+        message: 'Campaign found',
+        statusCode: 200,
+        status: 'Success',
+        data: result,
+        meta: {
+          totalData: 1,
+        },
+      };
+      
+    }
   
-    async findOne(id: number) {
+    async findOne(id: string) {
       const result = await this.campaignModel.findById(id);
       if (!result) {
         throw new NotFoundException('Campaign not found by id');

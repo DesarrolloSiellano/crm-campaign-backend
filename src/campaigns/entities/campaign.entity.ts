@@ -22,7 +22,7 @@ export interface Campaign extends Document {
 
 export const CampaignSchema = new Schema({
     company: { type: String, required: true },
-    name: { type: String, required: true },
+    name: { type: String, required: true, unique: true },
     description: { type: String, required: false },
     startDate: { type: String, required: true },
     endDate: { type: String, required: true },

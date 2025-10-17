@@ -7,6 +7,7 @@ export class CreateLeaderDto {
     celular: string;
     telefono?: string;
     email?: string;
+    company?: string;
     nickname?: string;
     lat?: string;
     lng?: string;

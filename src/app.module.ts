@@ -7,6 +7,7 @@ import { LeadersModule } from './leaders/leaders.module';
 import { ConfigModule } from '@nestjs/config';
 import { MultilevelModule } from './multilevel/multilevel.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { TcpClientModule } from './core/tcp/tcp.module';
 
 @Module({
   imports: [
@@ -15,8 +16,10 @@ import { CampaignsModule } from './campaigns/campaigns.module';
       envFilePath: ['.env.local', '.env'], 
     }),
     DatabaseModule,
+    TcpClientModule,
     PopulationModule,
     LeadersModule,
+    CampaignsModule,
     MultilevelModule,
     CampaignsModule
   ],

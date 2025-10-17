@@ -45,9 +45,7 @@ export class LeadersController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    console.log('Removing leader with ID:', id);
-    
+  remove(@Param('id') id: string) {  
     return this.leadersService.remove(id);
   }
 }
