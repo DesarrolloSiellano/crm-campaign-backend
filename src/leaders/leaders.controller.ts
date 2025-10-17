@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put, UseGuards, Req } from '@nestjs/common';
 import { LeadersService } from './leaders.service';
 import { CreateLeaderDto } from './dto/create-leader.dto';
 import { UpdateLeaderDto } from './dto/update-leader.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 //TODO: organizar la documentacion swagger
-
+@UseGuards(AuthGuard('jwt'))
 @Controller('leaders')
 export class LeadersController {
   constructor(private readonly leadersService: LeadersService) {}
@@ -31,6 +32,7 @@ export class LeadersController {
     @Query('global') global?: string,
     @Query('filters') filters?: string,
   ) {
+
     // Convierte from y limite a número, o usa valores por defecto
     const fromNumber = from !== undefined ? Number(from) : 0;
     const limiteNumber = limite !== undefined ? Number(limite) : 10;

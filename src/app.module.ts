@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { MultilevelModule } from './multilevel/multilevel.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { TcpClientModule } from './core/tcp/tcp.module';
+import { StrategyJwtGlobalModule } from './core/modules/strategyJwtModule.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { TcpClientModule } from './core/tcp/tcp.module';
     }),
     DatabaseModule,
     TcpClientModule,
+    StrategyJwtGlobalModule,
     PopulationModule,
     LeadersModule,
     CampaignsModule,
