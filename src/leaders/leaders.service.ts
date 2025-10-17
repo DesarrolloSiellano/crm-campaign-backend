@@ -115,6 +115,9 @@ export class LeadersService {
         this.userClient.send({ cmd: 'createUser' }, userPayload),
       );
 
+      console.log('Creatin user: ' + userResponse);
+      
+
       if (userResponse.statusCode === 201 || userResponse.statusCode === 200) {
         {
           response = {
