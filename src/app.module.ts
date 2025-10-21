@@ -9,6 +9,7 @@ import { MultilevelModule } from './multilevel/multilevel.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { TcpClientModule } from './core/tcp/tcp.module';
 import { StrategyJwtGlobalModule } from './core/modules/strategyJwtModule.module';
+import { AuthModule } from './core/modules/auth.module';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { StrategyJwtGlobalModule } from './core/modules/strategyJwtModule.module
     LeadersModule,
     CampaignsModule,
     MultilevelModule,
-    CampaignsModule
+    CampaignsModule,
+    AuthModule
   ],
   controllers: [AppController],
   providers: [AppService],

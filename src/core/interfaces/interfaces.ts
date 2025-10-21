@@ -81,3 +81,10 @@ export interface Rol extends Document {
   isInheritPermissions?: boolean;
   permissions: Permission[]
 }
+
+
+export class ChangePassword {
+  id: string;
+  currentPassword: string;
+  newPassword: string;
+}
