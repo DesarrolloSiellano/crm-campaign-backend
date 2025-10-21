@@ -23,16 +23,12 @@ export class JwtStrategy extends PassportStrategy( Strategy ) {
 
 
     async validate( payload: JwtPayload ): Promise<JwtPayload> {
-        console.log(payload);
         
         
         const { _id } = payload;
         const user = await lastValueFrom(
                 this.userClient.send({ cmd: 'findUserById' },  _id ),
         );
-
-        console.log(user);
-        
         
         if (!user.data) {
             throw new UnauthorizedException('Token no valid');
