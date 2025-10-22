@@ -5,6 +5,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Campaign } from './entities/campaign.entity';
 import { Model } from 'mongoose';
 import moment from 'moment';
+;
 
 @Injectable()
 export class CampaignsService {
@@ -97,11 +98,12 @@ export class CampaignsService {
       // Búsqueda global en varios campos
       if (global) {
         query.$or = [
-          { nombres: new RegExp(global, 'i') },
-          { apellidos: new RegExp(global, 'i') },
-          { numeroDocumento: new RegExp(global, 'i') },
-          { celular: new RegExp(global, 'i') },
-          { email: new RegExp(global, 'i') },
+          { name: new RegExp(global, 'i') },
+          { company: new RegExp(global, 'i') },
+          { description: new RegExp(global, 'i') },
+          { status: new RegExp(global, 'i') },
+          { startDate: new RegExp(global, 'i') },
+          { endDate: new RegExp(global, 'i') },
         ];
       }
   
@@ -124,6 +126,9 @@ export class CampaignsService {
     }
   
     async update(id: string, updateCampaignDto: UpdateCampaignDto) {
+
+      console.log(id, updateCampaignDto);
+      
       try {
         const result = await this.campaignModel.findByIdAndUpdate(
           id,
@@ -137,7 +142,7 @@ export class CampaignsService {
           throw new BadRequestException('id is required param');
         }
         return {
-          message: 'Campaignç updated successfully',
+          message: 'Campaign updated successfully',
           statusCode: 200,
           status: 'Success',
           data: [result],
