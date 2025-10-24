@@ -8,7 +8,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
   @Post('change-password')
   @UseGuards(AuthGuard('jwt'))
-  changePassword(@Body() changePassword: ChangePassword) {
+  changePassword(@Body() changePassword: ChangePassword, ) {
     return this.authService.changePassword(changePassword);
   }
 }

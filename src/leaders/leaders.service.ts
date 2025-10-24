@@ -16,11 +16,14 @@ import * as generatePassword from 'generate-password';
 import { ROLES } from './helpers/roles';
 import { PERMISSIONS } from './helpers/permissions';
 import { MODULES } from './helpers/modules';
+import { UpdateCampaignDto } from 'src/campaigns/dto/update-campaign.dto';
+import { Campaign } from '../campaigns/entities/campaign.entity';
 
 @Injectable()
 export class LeadersService {
   constructor(
     @InjectModel('Leader') private readonly leaderModel: Model<Leader>,
+    @InjectModel('Campaign') private readonly campaignModel: Model<Campaign>,
     @InjectModel('Multilevel')
     private readonly multilevelModel: Model<Multilevel>,
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
@@ -46,6 +49,7 @@ export class LeadersService {
         whatsapp: result.celular,
         policy: true,
         conditions: true,
+        company: createLeaderDto.company,
       };
 
       const resultMultilevel = new this.multilevelModel(multilevelData);
@@ -115,8 +119,6 @@ export class LeadersService {
         this.userClient.send({ cmd: 'createUser' }, userPayload),
       );
 
-      console.log('Creatin user: ' + userResponse);
-      
 
       if (userResponse.statusCode === 201 || userResponse.statusCode === 200) {
         {
@@ -149,6 +151,89 @@ export class LeadersService {
         );
       }
       throw new BadRequestException('Error creating leader: ' + error.message);
+    }
+  }
+
+  async updateCampaign(company: string, campaign: UpdateCampaignDto) {
+    try {
+      const campaignResult = await this.campaignModel.findById(campaign._id);
+
+      if (!campaignResult) {
+        throw new NotFoundException('Campaign not found');
+      }
+
+      if (campaignResult.status === 'CERRADA') {
+        throw new BadRequestException('No se puede actualizar porque la campaña está cerrada');
+      }
+      // Actualiza todos los líderes de la compañía con la campaña
+      const result = await this.leaderModel.updateMany(
+        { company: company }, // Filtro: líderes de esa compañía
+        { $set: { campaign: campaign } }, // Actualización: asignar la campaña completa u objeto
+        { runValidators: true },
+      );
+
+      // Si no se modificó ningún documento
+      if (result.matchedCount === 0) {
+        throw new NotFoundException('No leaders found for this company');
+      }
+
+      return {
+        message: 'Leaders configured successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: {
+          matched: result.matchedCount,
+          modified: result.modifiedCount,
+        },
+        meta: {
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException('Error updating Leaders: ' + error.message);
+    }
+  }
+  async updateCampaignByLeader(_id: string, campaign: UpdateCampaignDto) {
+
+
+    try {
+      const campaignResult = await this.campaignModel.findById(campaign._id);
+
+      if (!campaignResult) {
+        throw new NotFoundException('Campaign not found');
+      }
+
+       if (campaignResult.status === 'CERRADA') {
+        throw new BadRequestException('No se puede actualizar porque la campaña está cerrada');
+
+      }
+
+      const result = await this.leaderModel.findByIdAndUpdate(
+        _id, // ID del líder a actualizar
+        { $set: { campaign } }, // Asigna directamente la campaña enviada
+        {
+          new: true, // Devuelve el documento actualizado
+          runValidators: true, // Aplica validaciones del schema
+        },
+      );
+
+      if (!result) {
+        throw new NotFoundException('Leader not found');
+      }
+
+      return {
+        message: 'Leader campaign updated successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: result,
+        meta: {
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        'Error updating leader campaign: ' + error.message,
+      );
     }
   }
 

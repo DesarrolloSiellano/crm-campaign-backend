@@ -24,6 +24,7 @@ export interface Multilevel extends Document {
     city: string;
     state: string;
     country: string;
+    company: string;
 }
 
 export const MultilevelSchema = new Schema({
@@ -50,6 +51,7 @@ export const MultilevelSchema = new Schema({
     city: { type: String },
     state: { type: String },
     country: { type: String },
+    company: { type: String },
 })
 
 export const MultilevelModel = model<Multilevel>('Multilevel', MultilevelSchema);

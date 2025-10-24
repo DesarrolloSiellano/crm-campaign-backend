@@ -19,7 +19,6 @@ import { AuthGuard } from '@nestjs/passport';
 @Controller('campaigns')
 export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
-
   @Post()
   create(@Body() createCampaignDto: CreateCampaignDto) {
     return this.campaignsService.create(createCampaignDto);
@@ -33,6 +32,10 @@ export class CampaignsController {
   @Get('findByCompany')
   findByCompany(@Query('company') company: string) {
     return this.campaignsService.findByCompany(company);
+  }
+  @Get('findByAutocomplete')
+  findByAutocomplete(@Query('name') name: string) {
+    return this.campaignsService.findByAutocomplete(name);
   }
 
   @Get('findByPage')

@@ -14,6 +14,7 @@ export interface Campaign extends Document {
     isActive: boolean;
     targetAudience: string[];
     channels: string[];
+    leaders: string[];
     createdAt?: string;
     updatedAt?: string;
     idUserCreated?: string;
@@ -31,6 +32,7 @@ export const CampaignSchema = new Schema({
     isActive: { type: Boolean, default: true },
     targetAudience: { type: [String], required: false },
     channels: { type: [String], required: false },
+    leaders: [{ type: Schema.Types.ObjectId, ref: 'Leader' }],
     createdAt: { type: String, default: moment().format('YYYY-MM-DD') },
     updatedAt: { type: String, default: moment().format('YYYY-MM-DD') },
     hourCreated: { type: String, default: moment().format('HH:mm:ss') },
