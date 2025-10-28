@@ -3,6 +3,8 @@ import { LeadersService } from './leaders.service';
 import { CreateLeaderDto } from './dto/create-leader.dto';
 import { UpdateLeaderDto } from './dto/update-leader.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { CreateCampaignDto } from 'src/campaigns/dto/create-campaign.dto';
+import { UpdateCampaignDto } from 'src/campaigns/dto/update-campaign.dto';
 
 //TODO: organizar la documentacion swagger
 @UseGuards(AuthGuard('jwt'))
@@ -13,6 +15,16 @@ export class LeadersController {
   @Post()
   create(@Body() createLeaderDto: CreateLeaderDto) {
     return this.leadersService.create(createLeaderDto);
+  }
+
+  @Post('updateCampaign')
+  updateCampaign(@Query('company') company: string, @Body() campaign: UpdateCampaignDto) {
+    return this.leadersService.updateCampaign(company, campaign);
+  }
+
+  @Post('updateCampaignByLeader')
+  updateCampaignByLeader(@Query('id') id: string, @Body() campaign: UpdateCampaignDto) {
+    return this.leadersService.updateCampaignByLeader(id, campaign);
   }
 
   @Get()

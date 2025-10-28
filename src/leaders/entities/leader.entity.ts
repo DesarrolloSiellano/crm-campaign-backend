@@ -1,5 +1,7 @@
 import moment from 'moment';
 import { Schema, model, Document } from 'mongoose';
+import { Campaign } from 'src/campaigns/entities/campaign.entity';
+
 
 
 export interface Leader extends Document {
@@ -32,6 +34,8 @@ export interface Leader extends Document {
     idUserModificacion?: string;
     isUserModule?: boolean;
     idUser: string;
+    company: string
+    campaign: Campaign;
 }
 
 export const LeaderSchema = new Schema({
@@ -49,6 +53,7 @@ export const LeaderSchema = new Schema({
     lat: { type: String },
     lng: { type: String },
     comuna: { type: String },
+    company: { type: String },
     barrio: { type: String },
     vereda: { type: String },
     corregimiento: { type: String },
@@ -57,8 +62,8 @@ export const LeaderSchema = new Schema({
     urlFoto: { type: String,  },
     zonaInfluencia: { type: String },
     numeroVotantes: { type: String },
+    campaign: { type: Object, ref: 'Campaign' },
     
-
     fechaCreacion: { type: String, default: moment().format('YYYY-MM-DD') },
     fechaModificacion: { type: String, default: moment().format('YYYY-MM-DD') },
     horaCreacion: { type: String, default: moment().format('HH:mm:ss') },

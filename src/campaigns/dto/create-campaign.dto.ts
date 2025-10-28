@@ -1,4 +1,5 @@
 export class CreateCampaignDto {
+    _id?: string;
     company: string;
     name: string;
     description?: string;
