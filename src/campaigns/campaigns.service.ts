@@ -79,8 +79,9 @@ export class CampaignsService {
     };
   }
 
-  async findByAutocomplete(autocomplete: string) {
+  async findByAutocomplete(autocomplete: string, company: string) {
     const result = await this.campaignModel.find({
+      company: company,
       name: new RegExp(autocomplete, 'i'),
       status: 'ABIERTA',
     });
@@ -135,8 +136,10 @@ export class CampaignsService {
     };
   }
 
-  async findByPage(from?: number, limit?: number, global?: any, filters?: any) {
-    const query: any = {};
+  async findByPage(from?: number, limit?: number, global?: any, filters?: any, company?: string) {
+    const query: any = {
+      company: company
+    };
 
     // Búsqueda global en varios campos
     if (global) {
@@ -149,6 +152,9 @@ export class CampaignsService {
         { endDate: new RegExp(global, 'i') },
       ];
     }
+
+    console.log(query);
+    
 
     const skipNumber = from && from >= 0 ? from : 0;
     const limitNumber = limit && limit > 0 ? limit : 100;

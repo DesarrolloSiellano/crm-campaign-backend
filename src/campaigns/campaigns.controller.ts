@@ -9,6 +9,8 @@ import {
   Delete,
   Query,
   UseGuards,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CampaignsService } from './campaigns.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
@@ -30,21 +32,40 @@ export class CampaignsController {
   }
 
   @Get('findByCompany')
-  findByCompany(@Query('company') company: string) {
-    return this.campaignsService.findByCompany(company);
+  findByCompany(@Req() req: any) {
+    const user = req.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+
+    return this.campaignsService.findByCompany(user.company);
   }
+
   @Get('findByAutocomplete')
-  findByAutocomplete(@Query('name') name: string) {
-    return this.campaignsService.findByAutocomplete(name);
+  findByAutocomplete(@Req() req: any, @Query('name') name: string) {
+    const user = req.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+    return this.campaignsService.findByAutocomplete(name, user.company);
   }
 
   @Get('findByPage')
   findByPage(
+    @Req() req: any,
     @Query('from') from?: number,
     @Query('limite') limite?: number,
     @Query('global') global?: string,
     @Query('filters') filters?: string,
   ) {
+    const user = req.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+
     // Convierte from y limite a número, o usa valores por defecto
     const fromNumber = from !== undefined ? Number(from) : 0;
     const limiteNumber = limite !== undefined ? Number(limite) : 10;
@@ -53,6 +74,7 @@ export class CampaignsController {
       limiteNumber,
       global,
       filters,
+      user.company,
     );
   }
 
@@ -65,10 +87,9 @@ export class CampaignsController {
   update(
     @Param('id') id: string,
     @Body() updateCampaignDto: UpdateCampaignDto,
-  ) { 
+  ) {
     return this.campaignsService.update(id, updateCampaignDto);
   }
-  
 
   @Delete(':id')
   remove(@Param('id') id: string) {
