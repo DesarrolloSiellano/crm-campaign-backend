@@ -22,6 +22,7 @@ export interface Leader extends Document {
     barrio: string;
     vereda?: string;
     corregimiento?: string;
+    departamento: string;
     ciudad: string;
     tipoLider: string;
     urlFoto: string;
@@ -57,6 +58,7 @@ export const LeaderSchema = new Schema({
     barrio: { type: String },
     vereda: { type: String },
     corregimiento: { type: String },
+    departamento: { type: String },
     ciudad: { type: String },
     tipoLider: { type: String },
     urlFoto: { type: String,  },

@@ -18,6 +18,7 @@ export class CreateLeaderDto {
     barrio: string;
     vereda?: string;
     corregimiento?: string;
+    departamento: string;
     ciudad: string;
     tipoLider: string;
     urlFoto: string;

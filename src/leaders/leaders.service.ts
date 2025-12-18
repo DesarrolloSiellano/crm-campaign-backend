@@ -119,7 +119,6 @@ export class LeadersService {
         this.userClient.send({ cmd: 'createUser' }, userPayload),
       );
 
-
       if (userResponse.statusCode === 201 || userResponse.statusCode === 200) {
         {
           response = {
@@ -163,7 +162,9 @@ export class LeadersService {
       }
 
       if (campaignResult.status === 'CERRADA') {
-        throw new BadRequestException('No se puede actualizar porque la campaña está cerrada');
+        throw new BadRequestException(
+          'No se puede actualizar porque la campaña está cerrada',
+        );
       }
       // Actualiza todos los líderes de la compañía con la campaña
       const result = await this.leaderModel.updateMany(
@@ -194,8 +195,6 @@ export class LeadersService {
     }
   }
   async updateCampaignByLeader(_id: string, campaign: UpdateCampaignDto) {
-
-
     try {
       const campaignResult = await this.campaignModel.findById(campaign._id);
 
@@ -203,9 +202,10 @@ export class LeadersService {
         throw new NotFoundException('Campaign not found');
       }
 
-       if (campaignResult.status === 'CERRADA') {
-        throw new BadRequestException('No se puede actualizar porque la campaña está cerrada');
-
+      if (campaignResult.status === 'CERRADA') {
+        throw new BadRequestException(
+          'No se puede actualizar porque la campaña está cerrada',
+        );
       }
 
       const result = await this.leaderModel.findByIdAndUpdate(
@@ -301,6 +301,52 @@ export class LeadersService {
     };
   }
 
+  async findByGeo(
+    department: string,
+    city: string,
+    campaign: string,
+    company: string,
+  ) {
+    let query: any = {};
+
+    if (company) {
+      query = { company: company, 'campaign.name': campaign };
+    }
+
+    if (department) {
+      query.departamento = department;
+    }
+
+    if (city) {
+      query.ciudad = city;
+    }
+
+    console.log(query);
+
+    const results = await this.leaderModel.find(query);
+
+    // Mapear solo los campos deseados y concatenar nombre completo
+    const data = results.map((geo: any) => ({
+      lat: geo.lat,
+      lng: geo.lng,
+      nombre: `${geo.nombres} ${geo.apellidos}`.trim(), // <-- así creas 'nombre'
+    }));
+
+    if (!results || results.length === 0) {
+      throw new NotFoundException('No leaders found for the given location');
+    }
+
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'Leaders found by geographic location',
+      data,
+      meta: {
+        totalData: data.length,
+      },
+    };
+  }
+
   async update(id: string, updateLeaderDto: UpdateLeaderDto) {
     try {
       const result = await this.leaderModel.findByIdAndUpdate(
@@ -386,4 +432,52 @@ export class LeadersService {
       throw new BadRequestException('Error deleting leader: ' + error.message);
     }
   }
+
+  async updateProfilePhoto(
+    id: string,
+    file: Express.Multer.File,
+  ): Promise<any> {
+    // 1. Reenviar archivo a API externa (documentstorate)
+    //const externalResponse = await this.forwardToExternalAPI(file);
+
+    // 2. Guardar solo la URL en MongoDB
+ /*    const leader = await this.leaderModel.findByIdAndUpdate(
+      id,
+      {
+        photo_url: externalResponse.url, // URL devuelta por API externa
+        updated_at: new Date(),
+      },
+      { new: true },
+    );
+
+    return {
+      success: true,
+      data: {
+        photo_url: externalResponse.url,
+        leader,
+      },
+    }; */
+  }
+
+/*   private async forwardToExternalAPI(file: Express.Multer.File): Promise<any> {
+    const formData = new FormData();
+    formData.append('photo', file, {
+      filename: file.originalname,
+      contentType: file.mimetype,
+    });
+
+    const response = await firstValueFrom(
+      this.httpService.post(
+        'https://tu-documentstorate.com/api/upload',
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+          },
+        },
+      ),
+    );
+
+    return response.data; // { url: "https://cdn.documentstorate.com/xxx.jpg" }
+  } */
 }
