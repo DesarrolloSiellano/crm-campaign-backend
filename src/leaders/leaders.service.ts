@@ -18,16 +18,23 @@ import { PERMISSIONS } from './helpers/permissions';
 import { MODULES } from './helpers/modules';
 import { UpdateCampaignDto } from 'src/campaigns/dto/update-campaign.dto';
 import { Campaign } from '../campaigns/entities/campaign.entity';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class LeadersService {
+  private http = new HttpService();
+  private readonly STORAGE_API_URL: string;
   constructor(
     @InjectModel('Leader') private readonly leaderModel: Model<Leader>,
     @InjectModel('Campaign') private readonly campaignModel: Model<Campaign>,
     @InjectModel('Multilevel')
     private readonly multilevelModel: Model<Multilevel>,
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
-  ) {}
+    private configService: ConfigService
+  ) {
+    this.STORAGE_API_URL = this.configService.get('DOCUMENT_STORAGE_API')!;
+  }
   async create(createLeaderDto: CreateLeaderDto) {
     try {
       const result = new this.leaderModel(createLeaderDto);
@@ -438,46 +445,50 @@ export class LeadersService {
     file: Express.Multer.File,
   ): Promise<any> {
     // 1. Reenviar archivo a API externa (documentstorate)
-    //const externalResponse = await this.forwardToExternalAPI(file);
+    const externalResponse = await this.forwardToExternalAPI(file);
+
+    console.log('formData response', externalResponse);
+    
 
     // 2. Guardar solo la URL en MongoDB
- /*    const leader = await this.leaderModel.findByIdAndUpdate(
+      const result = await this.leaderModel.findByIdAndUpdate(
       id,
       {
-        photo_url: externalResponse.url, // URL devuelta por API externa
-        updated_at: new Date(),
+        urlFoto: externalResponse[0].url, // URL devuelta por API externa
+        originalNameFoto: externalResponse[0].originalName,
       },
       { new: true },
     );
 
-    return {
-      success: true,
-      data: {
-        photo_url: externalResponse.url,
-        leader,
-      },
-    }; */
+     return {
+        message: 'Leaders foto upload successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: [result],
+        meta: {
+          updatedAt: new Date().toISOString(),
+          urlFoto: externalResponse[0].url, // URL devuelta por API externa
+          originalNameFoto: externalResponse[0].originalName,
+        },
+      };
   }
 
-/*   private async forwardToExternalAPI(file: Express.Multer.File): Promise<any> {
+  private async forwardToExternalAPI(file: Express.Multer.File): Promise<any> {
     const formData = new FormData();
-    formData.append('photo', file, {
-      filename: file.originalname,
-      contentType: file.mimetype,
+    const uint8Array = new Uint8Array(file.buffer);
+    const blob = new Blob([uint8Array], {
+      type: file.mimetype || 'application/octet-stream',
     });
 
+    formData.append('images', blob, file.originalname);
+
     const response = await firstValueFrom(
-      this.httpService.post(
-        'https://tu-documentstorate.com/api/upload',
+      this.http.post(
+        `${this.STORAGE_API_URL}/upload-images`,
         formData,
-        {
-          headers: {
-            ...formData.getHeaders(),
-          },
-        },
       ),
     );
 
     return response.data; // { url: "https://cdn.documentstorate.com/xxx.jpg" }
-  } */
+  }
 }

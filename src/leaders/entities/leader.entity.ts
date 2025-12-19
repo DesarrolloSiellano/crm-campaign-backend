@@ -26,6 +26,7 @@ export interface Leader extends Document {
     ciudad: string;
     tipoLider: string;
     urlFoto: string;
+    originalNameFoto?: string;
     zonaInfluencia: string;
     numeroVotantes: string;
     fechaCreacion?: string;
@@ -62,6 +63,7 @@ export const LeaderSchema = new Schema({
     ciudad: { type: String },
     tipoLider: { type: String },
     urlFoto: { type: String,  },
+    originalNameFoto: { type: String },
     zonaInfluencia: { type: String },
     numeroVotantes: { type: String },
     campaign: { type: Object, ref: 'Campaign' },
