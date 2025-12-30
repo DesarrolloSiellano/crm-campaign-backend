@@ -23,6 +23,7 @@ export class CreateLeaderDto {
     tipoLider: string;
     urlFoto: string;
     originalNameFoto?: string;
+    uuidFoto?: string;
     zonaInfluencia: string;
     numeroVotantes: string;
     fechaCreacion?: string;

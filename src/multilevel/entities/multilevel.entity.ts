@@ -25,6 +25,8 @@ export interface Multilevel extends Document {
     state: string;
     country: string;
     company: string;
+     lat?: string; // coordenada geográfica
+  lng?: string;
 }
 
 export const MultilevelSchema = new Schema({
@@ -46,12 +48,14 @@ export const MultilevelSchema = new Schema({
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     whatsapp: { type: String, required: true, unique: true },
-    email: { type: String },
+    email: { type: String, unique: true },
     address: { type: String },
     city: { type: String },
     state: { type: String },
     country: { type: String },
     company: { type: String },
+    lat: { type: String }, // coordenada geográfica
+    lng: { type: String },
 })
 
 export const MultilevelModel = model<Multilevel>('Multilevel', MultilevelSchema);

@@ -82,18 +82,46 @@ export class LeadersController {
     );
   }
 
+  @Get('findByEmail')
+  findByEmail(@Req() req: any) {
+    const user = req.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+    return this.leadersService.findByEmail(user.email);
+  }
+
   @Get('findById/:id')
   findOne(@Param('id') id: string) {
-    return this.leadersService.findOne(+id);
+    return this.leadersService.findOne(id);
   }
 
   @Get('findByPage')
   findByPage(
+    @Req() req: any,
     @Query('from') from?: number,
     @Query('limite') limite?: number,
     @Query('global') global?: string,
     @Query('filters') filters?: string,
   ) {
+
+    const user = req.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+
+    if (!user.isActived) {
+      throw new UnauthorizedException('User is not active, please talk to the administrator');
+    }
+
+    if(!user.isAdmnin) {
+      throw new UnauthorizedException('User is not admin, please talk to the administrator');
+    }
+
+
+
     // Convierte from y limite a número, o usa valores por defecto
     const fromNumber = from !== undefined ? Number(from) : 0;
     const limiteNumber = limite !== undefined ? Number(limite) : 10;
@@ -102,6 +130,7 @@ export class LeadersController {
       limiteNumber,
       global,
       filters,
+      user.company
     );
   }
 

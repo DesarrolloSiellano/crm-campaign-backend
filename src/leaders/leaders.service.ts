@@ -260,7 +260,7 @@ export class LeadersService {
     };
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const result = await this.leaderModel.findById(id);
     if (!result) {
       throw new NotFoundException('Leader not found by id');
@@ -276,8 +276,26 @@ export class LeadersService {
     };
   }
 
-  async findByPage(from?: number, limit?: number, global?: any, filters?: any) {
-    const query: any = {};
+  async findByEmail(email: string) {
+    const result = await this.leaderModel.findOne({ email: email });
+    if (!result) {
+      throw new NotFoundException('Leader not found by email');
+    }
+    return {
+      message: 'Leader found',
+      statusCode: 200,
+      status: 'Success',
+      data: result,
+      meta: {
+        totalData: 1,
+      },
+    };
+  }
+
+  async findByPage(from?: number, limit?: number, global?: any, filters?: any, company?: string) {
+    const query: any = {
+      company: company
+    };
 
     // Búsqueda global en varios campos
     if (global) {
@@ -392,10 +410,13 @@ export class LeadersService {
   async remove(id: string) {
     try {
       const result = await this.leaderModel.findByIdAndDelete(id);
+
+      const deleteFoto = await this.deleteProfileFoto(result?.uuidFoto || '');      
       const resultMultilevel = await this.multilevelModel.findOneAndDelete({
         idInvited: id,
         idParentLevel: id,
       });
+
       if (!result) {
         throw new NotFoundException('Leader not found');
       }
@@ -413,6 +434,7 @@ export class LeadersService {
           data: [result],
           meta: {
             totalData: 1,
+            deleteImgProfile: deleteFoto,
             deletedAt: new Date().toISOString(),
             id: result._id,
             idMultilevel: resultMultilevel._id,
@@ -446,16 +468,13 @@ export class LeadersService {
   ): Promise<any> {
     // 1. Reenviar archivo a API externa (documentstorate)
     const externalResponse = await this.forwardToExternalAPI(file);
-
-    console.log('formData response', externalResponse);
-    
-
     // 2. Guardar solo la URL en MongoDB
       const result = await this.leaderModel.findByIdAndUpdate(
       id,
       {
         urlFoto: externalResponse[0].url, // URL devuelta por API externa
-        originalNameFoto: externalResponse[0].originalName,
+        originalNameFoto: externalResponse[0].original_filename,
+        uuidFoto: externalResponse[0].uuid,
       },
       { new: true },
     );
@@ -471,6 +490,17 @@ export class LeadersService {
           originalNameFoto: externalResponse[0].originalName,
         },
       };
+  }
+
+
+  async deleteProfileFoto(uuid: string){
+      const response = await firstValueFrom(
+      this.http.delete(
+        `${this.STORAGE_API_URL}/images/${uuid}`,
+      ),
+    );
+
+    return response.data
   }
 
   private async forwardToExternalAPI(file: Express.Multer.File): Promise<any> {

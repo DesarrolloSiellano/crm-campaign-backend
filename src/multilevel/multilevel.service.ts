@@ -117,8 +117,29 @@ export class MultilevelService {
     };
   }
 
-  async findByPage(from?: number, limit?: number, global?: any, filters?: any) {
-    const query: any = {};
+  async findByIdParentLevel(id: string) {
+    const result = this.multilevelModel.find({ idParentLevel: id });
+    if (!result) {
+      throw new NotFoundException('Multilevel not found by idParentLevel');
+    }
+    return {
+      message: 'Multilevel found',
+      statusCode: 200,
+      status: 'Success',
+      data: result,
+      meta: {
+        totalData: 1,
+      },
+    };
+  }
+
+   async findByPage(from?: number, limit?: number, global?: any, filters?: any, idParentLevel?: string, company?: string,) {
+  
+    const query: any = {
+      company: company,
+      idParentLevel: idParentLevel,
+      //level: { $ne: 1 }  // <-- Filtro: level diferente de 1
+    };
 
     // Búsqueda global en varios campos
     if (global) {
@@ -126,22 +147,24 @@ export class MultilevelService {
         { firstName: new RegExp(global, 'i') },
         { lastName: new RegExp(global, 'i') },
         { whatsapp: new RegExp(global, 'i') },
+        { showLevel: new RegExp(global, 'i') },
         { email: new RegExp(global, 'i') },
       ];
-    }
+    } 
 
     const skipNumber = from && from >= 0 ? from : 0;
     const limitNumber = limit && limit > 0 ? limit : 100;
-    const leaders = await this.multilevelModel
+    const followers = await this.multilevelModel
       .find(query)
       .skip(skipNumber)
       .limit(limitNumber);
     const totalData = await this.multilevelModel.countDocuments(query);
+    
     return {
       statusCode: 200,
       status: 'Success',
-      message: 'Leaders found',
-      data: leaders,
+      message: 'followers found',
+      data: followers,
       meta: {
         totalData: totalData,
       },
