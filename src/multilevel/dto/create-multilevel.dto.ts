@@ -22,4 +22,6 @@ export class CreateMultilevelDto {
     city?: string;
     state?: string;
     country?: string;
+    campaign?: any
+    company?: string
 }

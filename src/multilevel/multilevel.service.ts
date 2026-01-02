@@ -9,15 +9,17 @@ import { UpdateMultilevelDto } from './dto/update-multilevel.dto';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Multilevel } from './entities/multilevel.entity';
+import { Leader } from 'src/leaders/entities/leader.entity';
 
 @Injectable()
 export class MultilevelService {
   constructor(
     @InjectModel('Multilevel')
     private readonly multilevelModel: Model<Multilevel>,
+    @InjectModel('Leader')
+    private readonly leaderModel: Model<Leader>,
   ) {}
   async create(createMultilevelDto: CreateMultilevelDto) {
-
     try {
       createMultilevelDto.level = createMultilevelDto.level + 1;
 
@@ -36,6 +38,13 @@ export class MultilevelService {
       if (createMultilevelDto.level === 4 || createMultilevelDto.level > 4) {
         createMultilevelDto.levelShow = '4';
       }
+
+      const leader = await this.leaderModel.findOne({
+        _id: createMultilevelDto.idParentLevel,
+      });
+
+      createMultilevelDto.campaign = leader?.campaign || {};
+      createMultilevelDto.company = leader?.company || '';
 
       const result = new this.multilevelModel(createMultilevelDto);
       await result.save();
@@ -117,8 +126,84 @@ export class MultilevelService {
     };
   }
 
-  async findByPage(from?: number, limit?: number, global?: any, filters?: any) {
-    const query: any = {};
+  async findByGeo(
+    department: string,
+    city: string,
+    campaign: string,
+    company: string,
+    idParentLevel: string
+  ) {
+    let query: any = {};
+
+    if (company) {
+      query = { company: company, 'campaign.name': campaign };
+    }
+
+    if (idParentLevel && idParentLevel !== '') {
+      query.idParentLevel = idParentLevel;
+    }
+
+    if (department) {
+      query.state = department;
+    }
+
+    if (city) {
+      query.city = city;
+    }
+
+    const results = await this.multilevelModel.find(query);
+  
+    // Mapear solo los campos deseados y concatenar nombre completo
+    const data = results.map((geo: any) => ({
+      lat: geo.lat,
+      lng: geo.lng,
+      nombre: `${geo.firstName} ${geo.lastName}`.trim(), // <-- así creas 'nombre'
+    }));
+
+    if (!results || results.length === 0) {
+      throw new NotFoundException('No followers found for the given location');
+    }
+
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'followers found by geographic location',
+      data,
+      meta: {
+        totalData: data.length,
+      },
+    };
+  }
+
+  async findByIdParentLevel(id: string) {
+    const result = this.multilevelModel.find({ idParentLevel: id });
+    if (!result) {
+      throw new NotFoundException('Multilevel not found by idParentLevel');
+    }
+    return {
+      message: 'Multilevel found',
+      statusCode: 200,
+      status: 'Success',
+      data: result,
+      meta: {
+        totalData: 1,
+      },
+    };
+  }
+
+  async findByPage(
+    from?: number,
+    limit?: number,
+    global?: any,
+    filters?: any,
+    idParentLevel?: string,
+    company?: string,
+  ) {
+    const query: any = {
+      company: company,
+      idParentLevel: idParentLevel,
+      level: { $ne: 1 }  // <-- Filtro: level diferente de 1
+    };
 
     // Búsqueda global en varios campos
     if (global) {
@@ -126,22 +211,24 @@ export class MultilevelService {
         { firstName: new RegExp(global, 'i') },
         { lastName: new RegExp(global, 'i') },
         { whatsapp: new RegExp(global, 'i') },
+        { showLevel: new RegExp(global, 'i') },
         { email: new RegExp(global, 'i') },
       ];
     }
 
     const skipNumber = from && from >= 0 ? from : 0;
     const limitNumber = limit && limit > 0 ? limit : 100;
-    const leaders = await this.multilevelModel
+    const followers = await this.multilevelModel
       .find(query)
       .skip(skipNumber)
       .limit(limitNumber);
     const totalData = await this.multilevelModel.countDocuments(query);
+
     return {
       statusCode: 200,
       status: 'Success',
-      message: 'Leaders found',
-      data: leaders,
+      message: 'followers found',
+      data: followers,
       meta: {
         totalData: totalData,
       },
@@ -200,3 +287,7 @@ export class MultilevelService {
     };
   }
 }
+
+
+
+

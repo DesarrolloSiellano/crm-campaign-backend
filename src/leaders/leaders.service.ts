@@ -18,16 +18,23 @@ import { PERMISSIONS } from './helpers/permissions';
 import { MODULES } from './helpers/modules';
 import { UpdateCampaignDto } from 'src/campaigns/dto/update-campaign.dto';
 import { Campaign } from '../campaigns/entities/campaign.entity';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class LeadersService {
+  private http = new HttpService();
+  private readonly STORAGE_API_URL: string;
   constructor(
     @InjectModel('Leader') private readonly leaderModel: Model<Leader>,
     @InjectModel('Campaign') private readonly campaignModel: Model<Campaign>,
     @InjectModel('Multilevel')
     private readonly multilevelModel: Model<Multilevel>,
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
-  ) {}
+    private configService: ConfigService
+  ) {
+    this.STORAGE_API_URL = this.configService.get('DOCUMENT_STORAGE_API')!;
+  }
   async create(createLeaderDto: CreateLeaderDto) {
     try {
       const result = new this.leaderModel(createLeaderDto);
@@ -50,6 +57,7 @@ export class LeadersService {
         policy: true,
         conditions: true,
         company: createLeaderDto.company,
+        campaign: createLeaderDto.campaign,
       };
 
       const resultMultilevel = new this.multilevelModel(multilevelData);
@@ -119,7 +127,6 @@ export class LeadersService {
         this.userClient.send({ cmd: 'createUser' }, userPayload),
       );
 
-
       if (userResponse.statusCode === 201 || userResponse.statusCode === 200) {
         {
           response = {
@@ -163,7 +170,9 @@ export class LeadersService {
       }
 
       if (campaignResult.status === 'CERRADA') {
-        throw new BadRequestException('No se puede actualizar porque la campaña está cerrada');
+        throw new BadRequestException(
+          'No se puede actualizar porque la campaña está cerrada',
+        );
       }
       // Actualiza todos los líderes de la compañía con la campaña
       const result = await this.leaderModel.updateMany(
@@ -194,8 +203,6 @@ export class LeadersService {
     }
   }
   async updateCampaignByLeader(_id: string, campaign: UpdateCampaignDto) {
-
-
     try {
       const campaignResult = await this.campaignModel.findById(campaign._id);
 
@@ -203,9 +210,10 @@ export class LeadersService {
         throw new NotFoundException('Campaign not found');
       }
 
-       if (campaignResult.status === 'CERRADA') {
-        throw new BadRequestException('No se puede actualizar porque la campaña está cerrada');
-
+      if (campaignResult.status === 'CERRADA') {
+        throw new BadRequestException(
+          'No se puede actualizar porque la campaña está cerrada',
+        );
       }
 
       const result = await this.leaderModel.findByIdAndUpdate(
@@ -253,7 +261,7 @@ export class LeadersService {
     };
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const result = await this.leaderModel.findById(id);
     if (!result) {
       throw new NotFoundException('Leader not found by id');
@@ -269,8 +277,26 @@ export class LeadersService {
     };
   }
 
-  async findByPage(from?: number, limit?: number, global?: any, filters?: any) {
-    const query: any = {};
+  async findByEmail(email: string) {
+    const result = await this.leaderModel.findOne({ email: email });
+    if (!result) {
+      throw new NotFoundException('Leader not found by email');
+    }
+    return {
+      message: 'Leader found',
+      statusCode: 200,
+      status: 'Success',
+      data: result,
+      meta: {
+        totalData: 1,
+      },
+    };
+  }
+
+  async findByPage(from?: number, limit?: number, global?: any, filters?: any, company?: string) {
+    const query: any = {
+      company: company
+    };
 
     // Búsqueda global en varios campos
     if (global) {
@@ -297,6 +323,51 @@ export class LeadersService {
       data: leaders,
       meta: {
         totalData: totalData,
+      },
+    };
+  }
+
+  async findByGeo(
+    department: string,
+    city: string,
+    campaign: string,
+    company: string,
+  ) {
+    let query: any = {};
+
+    if (company) {
+      query = { company: company, 'campaign.name': campaign };
+    }
+
+    if (department) {
+      query.departamento = department;
+    }
+
+    if (city) {
+      query.ciudad = city;
+    }
+
+
+    const results = await this.leaderModel.find(query);
+
+    // Mapear solo los campos deseados y concatenar nombre completo
+    const data = results.map((geo: any) => ({
+      lat: geo.lat,
+      lng: geo.lng,
+      nombre: `${geo.nombres} ${geo.apellidos}`.trim(), // <-- así creas 'nombre'
+    }));
+
+    if (!results || results.length === 0) {
+      throw new NotFoundException('No leaders found for the given location');
+    }
+
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'Leaders found by geographic location',
+      data,
+      meta: {
+        totalData: data.length,
       },
     };
   }
@@ -339,10 +410,13 @@ export class LeadersService {
   async remove(id: string) {
     try {
       const result = await this.leaderModel.findByIdAndDelete(id);
+
+      const deleteFoto = await this.deleteProfileFoto(result?.uuidFoto || '');      
       const resultMultilevel = await this.multilevelModel.findOneAndDelete({
         idInvited: id,
         idParentLevel: id,
       });
+
       if (!result) {
         throw new NotFoundException('Leader not found');
       }
@@ -360,6 +434,7 @@ export class LeadersService {
           data: [result],
           meta: {
             totalData: 1,
+            deleteImgProfile: deleteFoto,
             deletedAt: new Date().toISOString(),
             id: result._id,
             idMultilevel: resultMultilevel._id,
@@ -385,5 +460,65 @@ export class LeadersService {
     } catch (error) {
       throw new BadRequestException('Error deleting leader: ' + error.message);
     }
+  }
+
+  async updateProfilePhoto(
+    id: string,
+    file: Express.Multer.File,
+  ): Promise<any> {
+    // 1. Reenviar archivo a API externa (documentstorate)
+    const externalResponse = await this.forwardToExternalAPI(file);
+    // 2. Guardar solo la URL en MongoDB
+      const result = await this.leaderModel.findByIdAndUpdate(
+      id,
+      {
+        urlFoto: externalResponse[0].url, // URL devuelta por API externa
+        originalNameFoto: externalResponse[0].original_filename,
+        uuidFoto: externalResponse[0].uuid,
+      },
+      { new: true },
+    );
+
+     return {
+        message: 'Leaders foto upload successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: [result],
+        meta: {
+          updatedAt: new Date().toISOString(),
+          urlFoto: externalResponse[0].url, // URL devuelta por API externa
+          originalNameFoto: externalResponse[0].originalName,
+        },
+      };
+  }
+
+
+  async deleteProfileFoto(uuid: string){
+      const response = await firstValueFrom(
+      this.http.delete(
+        `${this.STORAGE_API_URL}/images/${uuid}`,
+      ),
+    );
+
+    return response.data
+  }
+
+  private async forwardToExternalAPI(file: Express.Multer.File): Promise<any> {
+    const formData = new FormData();
+    const uint8Array = new Uint8Array(file.buffer);
+    const blob = new Blob([uint8Array], {
+      type: file.mimetype || 'application/octet-stream',
+    });
+
+    formData.append('images', blob, file.originalname);
+
+    const response = await firstValueFrom(
+      this.http.post(
+        `${this.STORAGE_API_URL}/upload-images`,
+        formData,
+      ),
+    );
+
+    return response.data; // { url: "https://cdn.documentstorate.com/xxx.jpg" }
   }
 }

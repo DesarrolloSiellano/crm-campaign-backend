@@ -1,3 +1,4 @@
+
 export class CreateLeaderDto {
     _id?: string;
     nombres: string;
@@ -18,9 +19,12 @@ export class CreateLeaderDto {
     barrio: string;
     vereda?: string;
     corregimiento?: string;
+    departamento: string;
     ciudad: string;
     tipoLider: string;
     urlFoto: string;
+    originalNameFoto?: string;
+    uuidFoto?: string;
     zonaInfluencia: string;
     numeroVotantes: string;
     fechaCreacion?: string;
@@ -30,4 +34,5 @@ export class CreateLeaderDto {
     idUserModificacion?: string;
     isUserModule?: boolean;
     idUser: string;
+    campaign?: any;
 }
