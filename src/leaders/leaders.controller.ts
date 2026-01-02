@@ -116,11 +116,10 @@ export class LeadersController {
       throw new UnauthorizedException('User is not active, please talk to the administrator');
     }
 
-    if(!user.isAdmnin) {
+
+    if(!user.isAdmin) {   
       throw new UnauthorizedException('User is not admin, please talk to the administrator');
     }
-
-
 
     // Convierte from y limite a número, o usa valores por defecto
     const fromNumber = from !== undefined ? Number(from) : 0;

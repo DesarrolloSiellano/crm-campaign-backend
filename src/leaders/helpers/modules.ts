@@ -1,7 +1,7 @@
 export const MODULES = [
   {
     _id: '68c217f3d4bca04c100485c0',
-   
+
     name: 'crmCampaign',
     description: 'Este es el módulo para la creación de campañas',
     isActive: true,
@@ -21,18 +21,32 @@ export const MODULES = [
             icon: 'home',
             isActive: true,
             _id: '68f015a63299e8bcd9d58f17',
-  
           },
           {
             name: 'Multinivel',
             path: '/multilevel',
             icon: 'address-book',
             isActive: true,
-            _id:  '68f015a63299e8bcd9d58f1a',
-
+            _id: '68f015a63299e8bcd9d58f1a',
           },
         ],
         _id: '68f015a63299e8bcd9d58f18',
+      },
+      {
+        name: 'Georeferencia',
+        path: '/georeference',
+        initPath: '',
+        icon: 'map-marker',
+        isActive: true,
+        children: [
+          {
+            name: 'Seguidores',
+            path: '/followers',
+            icon: 'map',
+            isActive: true,
+            _id: '694456d5e07a919741beb97e',
+          },
+        ],
       },
     ],
   },

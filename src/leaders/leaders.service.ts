@@ -57,6 +57,7 @@ export class LeadersService {
         policy: true,
         conditions: true,
         company: createLeaderDto.company,
+        campaign: createLeaderDto.campaign,
       };
 
       const resultMultilevel = new this.multilevelModel(multilevelData);
@@ -346,7 +347,6 @@ export class LeadersService {
       query.ciudad = city;
     }
 
-    console.log(query);
 
     const results = await this.leaderModel.find(query);
 

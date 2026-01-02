@@ -152,8 +152,6 @@ export class CampaignsService {
         { endDate: new RegExp(global, 'i') },
       ];
     }
-
-    console.log(query);
     
 
     const skipNumber = from && from >= 0 ? from : 0;
@@ -175,7 +173,6 @@ export class CampaignsService {
   }
 
   async update(id: string, updateCampaignDto: UpdateCampaignDto) {
-    console.log(id, updateCampaignDto);
 
     try {
       const result = await this.campaignModel.findByIdAndUpdate(

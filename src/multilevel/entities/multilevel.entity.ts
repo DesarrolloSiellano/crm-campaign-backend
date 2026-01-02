@@ -1,4 +1,5 @@
 import { Schema, model, Document } from 'mongoose';
+import { Campaign } from 'src/campaigns/entities/campaign.entity';
 
 export interface Multilevel extends Document {
     idInvited: string;
@@ -26,7 +27,8 @@ export interface Multilevel extends Document {
     country: string;
     company: string;
      lat?: string; // coordenada geográfica
-  lng?: string;
+    lng?: string;
+    campaign: Campaign;
 }
 
 export const MultilevelSchema = new Schema({
@@ -48,7 +50,7 @@ export const MultilevelSchema = new Schema({
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     whatsapp: { type: String, required: true, unique: true },
-    email: { type: String, unique: true },
+    email: { type: String },
     address: { type: String },
     city: { type: String },
     state: { type: String },
@@ -56,6 +58,8 @@ export const MultilevelSchema = new Schema({
     company: { type: String },
     lat: { type: String }, // coordenada geográfica
     lng: { type: String },
+     campaign: { type: Object, ref: 'Campaign' },
+     
 })
 
 export const MultilevelModel = model<Multilevel>('Multilevel', MultilevelSchema);

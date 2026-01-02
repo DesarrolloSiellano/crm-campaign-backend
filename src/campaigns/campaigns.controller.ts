@@ -45,7 +45,6 @@ export class CampaignsController {
   @Get('findByAutocomplete')
   findByAutocomplete(@Req() req: any, @Query('name') name: string) {
     const user = req.user;
-
     if (!user) {
       throw new UnauthorizedException('User not authorized');
     }

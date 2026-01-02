@@ -1,3 +1,4 @@
+
 export class CreateLeaderDto {
     _id?: string;
     nombres: string;
@@ -33,4 +34,5 @@ export class CreateLeaderDto {
     idUserModificacion?: string;
     isUserModule?: boolean;
     idUser: string;
+    campaign?: any;
 }
