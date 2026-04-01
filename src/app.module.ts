@@ -10,12 +10,14 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { TcpClientModule } from './core/tcp/tcp.module';
 import { StrategyJwtGlobalModule } from './core/modules/strategyJwtModule.module';
 import { AuthModule } from './core/modules/auth.module';
+import { EventsModule } from './events/events.module';
+
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'], 
+      envFilePath: ['.env.local', '.env'],
     }),
     DatabaseModule,
     TcpClientModule,
@@ -25,9 +27,10 @@ import { AuthModule } from './core/modules/auth.module';
     CampaignsModule,
     MultilevelModule,
     CampaignsModule,
-    AuthModule
+    AuthModule,
+    EventsModule
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
