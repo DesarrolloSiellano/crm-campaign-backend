@@ -8,34 +8,32 @@ import { firstValueFrom, lastValueFrom } from "rxjs";
 
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy( Strategy ) {
+export class JwtStrategy extends PassportStrategy(Strategy) {
 
-    constructor( 
-            configService: ConfigService,
-            @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
-        ) {
+    constructor(
+        configService: ConfigService,
+        @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
+    ) {
         super({
             secretOrKey: configService.get('JWT_SECRET'),
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            
+
         });
     }
 
 
-    async validate( payload: JwtPayload ): Promise<JwtPayload> {
-        
-        
+    async validate(payload: JwtPayload): Promise<JwtPayload> {
         const { _id } = payload;
         const user = await lastValueFrom(
-                this.userClient.send({ cmd: 'findUserById' },  _id ),
+            this.userClient.send({ cmd: 'findUserById' }, _id),
         );
-        
-        if (!user.data) {
+
+        if (!user) {
             throw new UnauthorizedException('Token no valid');
         }
-        if (!user.data.isActived) {
+        if (!user.isActived) {
             throw new UnauthorizedException('User is not active, please talk to the administrator');
         }
-        return user.data;
+        return user;
     }
 }

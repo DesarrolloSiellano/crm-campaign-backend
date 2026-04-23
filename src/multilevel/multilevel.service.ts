@@ -18,7 +18,7 @@ export class MultilevelService {
     private readonly multilevelModel: Model<Multilevel>,
     @InjectModel('Leader')
     private readonly leaderModel: Model<Leader>,
-  ) {}
+  ) { }
   async create(createMultilevelDto: CreateMultilevelDto) {
     try {
       createMultilevelDto.level = createMultilevelDto.level + 1;
@@ -68,11 +68,11 @@ export class MultilevelService {
     } catch (error) {
       if (error.code === 11000) {
         throw new BadRequestException(
-          'Duplicate key error: Leader already exists ' +
-            JSON.stringify(error.keyValue),
+          'Duplicate key error: Follower already exists ' +
+          JSON.stringify(error.keyValue),
         );
       }
-      throw new BadRequestException('Error creating leader: ' + error.message);
+      throw new BadRequestException('Error creating Follower: ' + error.message);
     }
   }
 
@@ -126,6 +126,65 @@ export class MultilevelService {
     };
   }
 
+  async findByWhatsapps(whatsapps: string[]) {
+    const result = await this.multilevelModel.find({
+      whatsapp: { $in: whatsapps },
+    });
+
+    if (!result.length) {
+      throw new NotFoundException('Multilevel not found by whatsapps');
+    }
+
+    return {
+      message: 'Multilevels found',
+      statusCode: 200,
+      status: 'Success',
+      data: result,
+      meta: {
+        totalData: result.length,
+        idsMultilevel: result.map(item => item._id),
+      },
+    };
+  }
+
+  async findByEmail(email: string) {
+    const result = await this.multilevelModel.findOne({ email });
+    if (!result) {
+      throw new NotFoundException('Multilevel not found by email');
+    }
+    return {
+      message: 'Multilevel found',
+      statusCode: 200,
+      status: 'Success',
+      data: [result],
+      meta: {
+        totalData: 1,
+        idMultilevel: result._id,
+      },
+    };
+  }
+
+  async findByEmails(emails: string[]) {
+    const result = await this.multilevelModel.find({
+      email: { $in: emails },
+    });
+
+    if (!result.length) {
+      throw new NotFoundException('Multilevel not found by emails');
+    }
+
+    return {
+      message: 'Multilevels found',
+      statusCode: 200,
+      status: 'Success',
+      data: result,
+      meta: {
+        totalData: result.length,
+        idsMultilevel: result.map(item => item._id),
+      },
+    };
+  }
+
   async findByGeo(
     department: string,
     city: string,
@@ -152,7 +211,7 @@ export class MultilevelService {
     }
 
     const results = await this.multilevelModel.find(query);
-  
+
     // Mapear solo los campos deseados y concatenar nombre completo
     const data = results.map((geo: any) => ({
       lat: geo.lat,
@@ -260,7 +319,7 @@ export class MultilevelService {
       if (error.code === 11000) {
         throw new BadRequestException(
           'Duplicate key error: Multilevel already exists ' +
-            JSON.stringify(error.keyValue),
+          JSON.stringify(error.keyValue),
         );
       }
       throw new BadRequestException(

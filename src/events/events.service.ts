@@ -131,7 +131,6 @@ export class EventsService {
       query['campaign._id'] = idCampaign;
     }
 
-    console.log(query);
 
     // Búsqueda global en varios campos
     if (global) {
