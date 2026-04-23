@@ -35,6 +35,7 @@ export class LeadersService {
   ) {
     this.STORAGE_API_URL = this.configService.get('DOCUMENT_STORAGE_API')!;
   }
+
   async create(createLeaderDto: CreateLeaderDto) {
     try {
       const result = new this.leaderModel(createLeaderDto);
@@ -54,6 +55,7 @@ export class LeadersService {
         firstName: result.nombres,
         lastName: result.apellidos,
         whatsapp: result.celular,
+        email: result.email,
         policy: true,
         conditions: true,
         company: createLeaderDto.company,
@@ -99,20 +101,13 @@ export class LeadersService {
         };
       }
 
-      const tempPassword = generatePassword.generate({
-        length: 12,
-        numbers: true,
-        uppercase: true,
-        symbols: true,
-        strict: true,
-      });
-
       const userPayload = {
+        _id: result._id,
         name: result.nombres,
         lastName: result.apellidos,
         email: result.email,
         phone: result.celular,
-        password: tempPassword,
+        redirectUri: createLeaderDto.redirectUri || null,
         role: ROLES,
         permissions: PERMISSIONS,
         modules: MODULES,
@@ -154,7 +149,7 @@ export class LeadersService {
       if (error.code === 11000) {
         throw new BadRequestException(
           'Duplicate key error: Leader already exists ' +
-            JSON.stringify(error.keyValue),
+          JSON.stringify(error.keyValue),
         );
       }
       throw new BadRequestException('Error creating leader: ' + error.message);
@@ -400,7 +395,7 @@ export class LeadersService {
       if (error.code === 11000) {
         throw new BadRequestException(
           'Duplicate key error: Leader already exists ' +
-            JSON.stringify(error.keyValue),
+          JSON.stringify(error.keyValue),
         );
       }
       throw new BadRequestException('Error updating leader: ' + error.message);
@@ -411,7 +406,7 @@ export class LeadersService {
     try {
       const result = await this.leaderModel.findByIdAndDelete(id);
 
-      const deleteFoto = await this.deleteProfileFoto(result?.uuidFoto || '');      
+      const deleteFoto = await this.deleteProfileFoto(result?.uuidFoto || '');
       const resultMultilevel = await this.multilevelModel.findOneAndDelete({
         idInvited: id,
         idParentLevel: id,
@@ -469,7 +464,7 @@ export class LeadersService {
     // 1. Reenviar archivo a API externa (documentstorate)
     const externalResponse = await this.forwardToExternalAPI(file);
     // 2. Guardar solo la URL en MongoDB
-      const result = await this.leaderModel.findByIdAndUpdate(
+    const result = await this.leaderModel.findByIdAndUpdate(
       id,
       {
         urlFoto: externalResponse[0].url, // URL devuelta por API externa
@@ -479,22 +474,22 @@ export class LeadersService {
       { new: true },
     );
 
-     return {
-        message: 'Leaders foto upload successfully',
-        statusCode: 200,
-        status: 'Success',
-        data: [result],
-        meta: {
-          updatedAt: new Date().toISOString(),
-          urlFoto: externalResponse[0].url, // URL devuelta por API externa
-          originalNameFoto: externalResponse[0].originalName,
-        },
-      };
+    return {
+      message: 'Leaders foto upload successfully',
+      statusCode: 200,
+      status: 'Success',
+      data: [result],
+      meta: {
+        updatedAt: new Date().toISOString(),
+        urlFoto: externalResponse[0].url, // URL devuelta por API externa
+        originalNameFoto: externalResponse[0].originalName,
+      },
+    };
   }
 
 
-  async deleteProfileFoto(uuid: string){
-      const response = await firstValueFrom(
+  async deleteProfileFoto(uuid: string) {
+    const response = await firstValueFrom(
       this.http.delete(
         `${this.STORAGE_API_URL}/images/${uuid}`,
       ),

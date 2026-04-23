@@ -35,4 +35,5 @@ export class CreateLeaderDto {
     isUserModule?: boolean;
     idUser: string;
     campaign?: any;
+    redirectUri?: string;
 }

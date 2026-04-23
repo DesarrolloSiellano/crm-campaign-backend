@@ -26,7 +26,7 @@ export interface Multilevel extends Document {
     state: string;
     country: string;
     company: string;
-     lat?: string; // coordenada geográfica
+    lat?: string; // coordenada geográfica
     lng?: string;
     campaign: Campaign;
 }
@@ -35,11 +35,11 @@ export const MultilevelSchema = new Schema({
     idInvited: { type: Schema.Types.ObjectId, ref: 'Multilevel' },
     idParentLevel: { type: Schema.Types.ObjectId, ref: 'Multilevel' },
     idChild: { type: Schema.Types.ObjectId },
-    levelShow: { type: String, require: true},
-    level: { type: Number, require: true},
-    profile: { type: String, require: true},
-    conditions: { type: Boolean},
-    policy: { type: Boolean},
+    levelShow: { type: String, require: true },
+    level: { type: Number, require: true },
+    profile: { type: String, require: true },
+    conditions: { type: Boolean },
+    policy: { type: Boolean },
     createdDate: { type: String, default: new Date().toISOString().split('T')[0] },
     createdHour: { type: String, default: new Date().toISOString().split('T')[1].split('.')[0] },
     updatedDate: { type: String, default: new Date().toISOString().split('T')[0] },
@@ -50,7 +50,7 @@ export const MultilevelSchema = new Schema({
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     whatsapp: { type: String, required: true, unique: true },
-    email: { type: String },
+    email: { type: String, unique: true },
     address: { type: String },
     city: { type: String },
     state: { type: String },
@@ -58,8 +58,8 @@ export const MultilevelSchema = new Schema({
     company: { type: String },
     lat: { type: String }, // coordenada geográfica
     lng: { type: String },
-     campaign: { type: Object, ref: 'Campaign' },
-     
+    campaign: { type: Object, ref: 'Campaign' },
+
 })
 
 export const MultilevelModel = model<Multilevel>('Multilevel', MultilevelSchema);

@@ -10,6 +10,7 @@ import {
   UnauthorizedException,
   Req,
   UseGuards,
+  ParseArrayPipe,
 } from '@nestjs/common';
 import { MultilevelService } from './multilevel.service';
 import { CreateMultilevelDto } from './dto/create-multilevel.dto';
@@ -18,7 +19,7 @@ import { AuthGuard } from '@nestjs/passport';
 
 @Controller('multilevel')
 export class MultilevelController {
-  constructor(private readonly multilevelService: MultilevelService) {}
+  constructor(private readonly multilevelService: MultilevelService) { }
 
   @Post()
   create(@Body() createMultilevelDto: CreateMultilevelDto) {
@@ -50,10 +51,34 @@ export class MultilevelController {
     );
   }
 
+
+  @Get('/findByWhatsApps')
+  findByWhatsapps(
+    @Query('whatsapps', new ParseArrayPipe({ items: String, separator: ',' }))
+    whatsapps: string[],
+  ) {
+    return this.multilevelService.findByWhatsapps(whatsapps);
+  }
+
+  @Get('/findByEmails')
+  findByEmails(
+    @Query('emails', new ParseArrayPipe({ items: String, separator: ',' }))
+    emails: string[],
+  ) {
+    return this.multilevelService.findByEmails(emails);
+  }
+
   @Get('/findByWhatsApp/:whatsapp')
   findByWhatsapp(@Param('whatsapp') whatsapp: string) {
     return this.multilevelService.findByWhatsapp(whatsapp);
   }
+
+  @Get('/findByEmail/:email')
+  findByEmail(@Param('email') email: string) {
+    return this.multilevelService.findByEmail(email);
+  }
+
+
 
   @UseGuards(AuthGuard('jwt'))
   @Get()
@@ -76,7 +101,7 @@ export class MultilevelController {
     if (!user) {
       throw new UnauthorizedException('User not authorized');
     }
- 
+
     // Convierte from y limite a número, o usa valores por defecto
     const fromNumber = from !== undefined ? Number(from) : 0;
     const limiteNumber = limite !== undefined ? Number(limite) : 10;
