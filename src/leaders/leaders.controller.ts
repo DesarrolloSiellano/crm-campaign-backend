@@ -24,7 +24,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @UseGuards(AuthGuard('jwt'))
 @Controller('leaders')
 export class LeadersController {
-  constructor(private readonly leadersService: LeadersService) {}
+  constructor(private readonly leadersService: LeadersService) { }
 
   @Post()
   create(@Body() createLeaderDto: CreateLeaderDto) {
@@ -92,6 +92,21 @@ export class LeadersController {
     return this.leadersService.findByEmail(user.email);
   }
 
+  @Get('findAllLeaders')
+  findAllLeaders(
+    @Req() req: any,
+    @Query('idCampaign') idCampaign: string,
+    @Query('query') query: string,
+  ) {
+    const user = req.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+
+    return this.leadersService.findAllLeaders(idCampaign, query);
+  }
+
   @Get('findById/:id')
   findOne(@Param('id') id: string) {
     return this.leadersService.findOne(id);
@@ -117,7 +132,7 @@ export class LeadersController {
     }
 
 
-    if(!user.isAdmin) {   
+    if (!user.isAdmin) {
       throw new UnauthorizedException('User is not admin, please talk to the administrator');
     }
 

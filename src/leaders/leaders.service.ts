@@ -7,7 +7,7 @@ import {
 import { CreateLeaderDto } from './dto/create-leader.dto';
 import { UpdateLeaderDto } from './dto/update-leader.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { Leader } from './entities/leader.entity';
 import { Multilevel } from 'src/multilevel/entities/multilevel.entity';
 import { ClientProxy } from '@nestjs/microservices';
@@ -197,6 +197,7 @@ export class LeadersService {
       throw new BadRequestException('Error updating Leaders: ' + error.message);
     }
   }
+
   async updateCampaignByLeader(_id: string, campaign: UpdateCampaignDto) {
     try {
       const campaignResult = await this.campaignModel.findById(campaign._id);
@@ -365,6 +366,80 @@ export class LeadersService {
         totalData: data.length,
       },
     };
+  }
+
+  async findAllLeaders(idCampaign: string, query: string) {
+    try {
+      const matchStage: any = {};
+
+      if (idCampaign) {
+        if (mongoose.Types.ObjectId.isValid(idCampaign)) {
+          matchStage['campaign._id'] = {
+            $in: [idCampaign, new mongoose.Types.ObjectId(idCampaign)],
+          };
+        } else {
+          matchStage['campaign._id'] = idCampaign;
+        }
+      }
+
+      const trimmedQuery = query ? query.trim() : '';
+
+      if (trimmedQuery) {
+        matchStage.$or = [
+          { nombres: new RegExp(trimmedQuery, 'i') },
+          { apellidos: new RegExp(trimmedQuery, 'i') },
+          { numeroDocumento: new RegExp(trimmedQuery, 'i') },
+          { celular: new RegExp(trimmedQuery, 'i') },
+          { email: new RegExp(trimmedQuery, 'i') },
+        ];
+      }
+
+      const leaders = await this.leaderModel.aggregate([
+        { $match: matchStage },
+        {
+          $lookup: {
+            from: 'multilevels',
+            localField: '_id',
+            foreignField: 'idParentLevel',
+            as: 'folowers',
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            nombres: 1,
+            apellidos: 1,
+            celular: 1,
+            email: 1,
+            folowers: {
+              $map: {
+                input: '$folowers',
+                as: 'f',
+                in: {
+                  _id: '$$f._id',
+                  firstName: '$$f.firstName',
+                  lastName: '$$f.lastName',
+                  whatsapp: '$$f.whatsapp',
+                  email: '$$f.email',
+                },
+              },
+            },
+          },
+        },
+      ]);
+
+      return {
+        statusCode: 200,
+        status: 'Success',
+        message: 'Leaders found',
+        data: leaders,
+        meta: {
+          totalData: leaders.length,
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException('Error finding leaders: ' + error.message);
+    }
   }
 
   async update(id: string, updateLeaderDto: UpdateLeaderDto) {
