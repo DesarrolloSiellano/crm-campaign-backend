@@ -10,7 +10,7 @@ export interface Event extends Document {
     location?: string;
     type: 'PRESENCIAL' | 'VIRTUAL';
     link?: string;
-    assignedLeaderIds: string[]; // IDs of Multilevel nodes (Leaders or intermediate)
+    assignedLeaderIds: Object[]; // IDs of Multilevel nodes (Leaders or intermediate)
     company: string;
     campaign?: Campaign;
     status: 'PROGRAMADO' | 'COMPLETADO' | 'CANCELADO';
@@ -29,7 +29,7 @@ export const EventSchema = new Schema({
     location: { type: String },
     type: { type: String, enum: ['PRESENCIAL', 'VIRTUAL'], default: 'PRESENCIAL' },
     link: { type: String },
-    assignedLeaderIds: [{ type: Schema.Types.ObjectId, ref: 'Multilevel' }],
+    assignedLeaderIds: [{ type: Object }],
     company: { type: String, required: true },
     campaign: { type: Object, ref: 'Campaign' },
     status: { type: String, enum: ['PROGRAMADO', 'COMPLETADO', 'CANCELADO'], default: 'PROGRAMADO' },
