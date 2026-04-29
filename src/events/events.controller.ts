@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Query, Patch, Req, UnauthorizedException, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Query, Patch, Req, Put, UnauthorizedException, UseGuards, BadRequestException } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -99,7 +99,17 @@ export class EventsController {
     return this.eventsService.findOne(id);
   }
 
-  @Patch(':id')
+  @Get(':id/attendance-list')
+  getAttendanceList(
+    @Param('id') id: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('globalFilter') globalFilter?: string,
+  ) {
+    return this.eventsService.getAttendanceList(id, page ? Number(page) : 0, limit ? Number(limit) : 100, globalFilter);
+  }
+
+  @Put(':id')
   update(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto) {
     return this.eventsService.update(id, updateEventDto);
   }
