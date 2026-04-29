@@ -15,6 +15,13 @@ export class EventsService {
 
   async create(createEventDto: CreateEventDto) {
     try {
+      // Sanitizar assignedLeaderIds para guardar solo los IDs
+      if (createEventDto.assignedLeaderIds) {
+        createEventDto.assignedLeaderIds = createEventDto.assignedLeaderIds.map((item: any) =>
+          typeof item === 'object' ? item._id : item
+        );
+      }
+
       const result = new this.eventModel(createEventDto);
       await result.save();
 
@@ -54,23 +61,102 @@ export class EventsService {
   }
 
   /**
+   * Obtiene la lista de asistentes (Líderes + Seguidores) de forma dinámica y paginada.
+   * Los seguidores se obtienen en tiempo real de la colección multilevels.
+   */
+  async getAttendanceList(eventId: string, page: number = 0, limit: number = 100, globalFilter?: string) {
+    try {
+      const event = await this.eventModel.findById(eventId);
+      if (!event) throw new NotFoundException('Evento no encontrado');
+
+      const leaderIds = event.assignedLeaderIds.map(id => new Types.ObjectId(id));
+      const attendedIds = event.attendance?.map(a => a.attendeeId) || [];
+
+      // Query para buscar líderes y sus seguidores
+      const matchQuery: any = {
+        $or: [
+          { _id: { $in: leaderIds } },
+          { idParentLevel: { $in: leaderIds } }
+        ]
+      };
+
+      // Filtro global si existe
+      if (globalFilter) {
+        matchQuery.$and = [
+          {
+            $or: [
+              { firstName: new RegExp(globalFilter, 'i') },
+              { lastName: new RegExp(globalFilter, 'i') },
+              { email: new RegExp(globalFilter, 'i') },
+              { whatsapp: new RegExp(globalFilter, 'i') }
+            ]
+          }
+        ];
+      }
+
+      const totalCount = await this.multilevelModel.countDocuments(matchQuery);
+
+      const attendees = await this.multilevelModel.aggregate([
+        { $match: matchQuery },
+        {
+          $project: {
+            _id: 1,
+            fullName: { $concat: ['$firstName', ' ', '$lastName'] },
+            email: 1,
+            phone: '$whatsapp',
+            profile: 1,
+            idParentLevel: 1
+          }
+        },
+        { $sort: { fullName: 1 } },
+        { $skip: page * limit },
+        { $limit: limit }
+      ]);
+
+      const data = attendees.map(person => {
+        const profile = person.profile || 'Seguidor';
+        const isLeader = /^L[íi]der/i.test(profile);
+        
+        return {
+          id: person._id.toString(),
+          fullName: person.fullName,
+          email: person.email,
+          phone: person.phone,
+          role: profile,
+          severity: isLeader ? 'info' : 'success',
+          attended: attendedIds.includes(person._id.toString())
+        };
+      });
+
+      return {
+        message: 'Lista de asistentes cargada dinámicamente',
+        statusCode: 200,
+        status: 'Success',
+        data,
+        meta: {
+          totalData: totalCount,
+          capacity: event.capacity,
+          currentlyAttended: attendedIds.length
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException('Error al cargar lista de asistencia: ' + error.message);
+    }
+  }
+
+  /**
    * Encuentra todos los eventos para un usuario específico basándose en su jerarquía.
-   * Un usuario ve eventos asignados a:
-   * 1. Él mismo (su idInvited/Multilevel _id)
-   * 2. Cualquier ancestro directo en la red multinivel (idParentLevel recursivo)
    */
   async findAllForUser(userId: string) {
     try {
-      // 1. Obtener la jerarquía de ancestros del usuario
-      // Usamos agregación para encontrar todos los IDs superiores
       const hierarchy = await this.multilevelModel.aggregate([
         { $match: { _id: new Types.ObjectId(userId) } },
         {
           $graphLookup: {
-            from: 'multilevels', // Mongoose pluraliza 'Multilevel'
+            from: 'multilevels',
             startWith: '$idParentLevel',
             connectFromField: 'idParentLevel',
-            connectToField: 'idInvited', // En este proyecto idInvited parece ser el ID único del nodo
+            connectToField: 'idInvited',
             as: 'ancestors',
           },
         },
@@ -93,13 +179,11 @@ export class EventsService {
         throw new NotFoundException('Usuario no encontrado en la red multinivel');
       }
 
-      // Limpiar IDs nulos y duplicados (convertir a strings para comparación)
       const assignerIds = [...new Set(hierarchy[0].allAssignerIds
         .filter((id: any) => id)
         .map((id: any) => id.toString())
       )];
 
-      // 2. Buscar eventos asignados a cualquiera de esos IDs
       const events = await this.eventModel.find({
         assignedLeaderIds: { $in: assignerIds },
         status: 'PROGRAMADO'
@@ -132,7 +216,6 @@ export class EventsService {
     }
 
 
-    // Búsqueda global en varios campos
     if (global) {
       query.$or = [
         { title: new RegExp(global, 'i') },
@@ -182,6 +265,13 @@ export class EventsService {
 
   async update(id: string, updateEventDto: UpdateEventDto) {
     try {
+      // Sanitizar assignedLeaderIds para guardar solo los IDs
+      if (updateEventDto.assignedLeaderIds) {
+        updateEventDto.assignedLeaderIds = updateEventDto.assignedLeaderIds.map((item: any) =>
+          typeof item === 'object' ? item._id : item
+        );
+      }
+
       const result = await this.eventModel.findByIdAndUpdate(id, updateEventDto, { new: true, runValidators: true });
       if (!result) throw new NotFoundException('Evento no encontrado');
       return {
@@ -196,27 +286,79 @@ export class EventsService {
     }
   }
 
-  async toggleAttendance(id: string, attendanceDto: { attendeeId: string, fullName: string, email: string, phone: string, role: string, status: boolean }) {
+  async toggleAttendance(id: string, attendanceDto: { attendeeId: string, fullName?: string, email?: string, phone?: string, role?: string, status: boolean }) {
     try {
-      const { attendeeId, fullName, email, phone, role, status } = attendanceDto;
+      let { attendeeId, fullName, email, phone, role, status } = attendanceDto;
 
-      const update = status
-        ? { $addToSet: { attendance: { attendeeId, fullName, email, phone, role, checkIn: new Date() } } }
-        : { $pull: { attendance: { attendeeId: attendeeId } } };
+      const event = await this.eventModel.findById(id);
+      if (!event) throw new NotFoundException('Evento no encontrado');
 
-      const result = await this.eventModel.findByIdAndUpdate(id, update, { new: true });
+      // Si se intenta marcar asistencia (status: true)
+      if (status) {
+        // 1. Verificar aforo (solo si capacity > 0)
+        const currentAttendance = event.attendance?.length || 0;
+        if (event.capacity > 0 && currentAttendance >= event.capacity) {
+          throw new BadRequestException(`Aforo completo. Capacidad máxima: ${event.capacity} personas.`);
+        }
 
-      if (!result) throw new NotFoundException('Evento no encontrado');
+        // 2. Buscar a la persona en multilevels para validar jerarquía y obtener datos
+        const personFound = await this.multilevelModel.findById(attendeeId);
+        if (!personFound) throw new NotFoundException('La persona no existe en la red multinivel');
+        const person = personFound as any;
 
-      return {
-        message: status ? 'Asistencia marcada' : 'Asistencia removida',
-        statusCode: 200,
-        status: 'Success',
-        data: [result],
-        meta: { totalData: 1 },
-      };
+        // 3. VALIDACIÓN DE JERARQUÍA: ¿Es líder asignado o seguidor de un líder asignado?
+        const isAssignedLeader = event.assignedLeaderIds.includes(person._id.toString());
+        const isFollowerOfAssignedLeader = person.idParentLevel && event.assignedLeaderIds.includes(person.idParentLevel.toString());
+
+        if (!isAssignedLeader && !isFollowerOfAssignedLeader) {
+          throw new BadRequestException('Esta persona no está asignada ni es seguidora de los líderes de este evento.');
+        }
+
+        // Si faltan datos (escaneo QR), completarlos
+        if (!fullName || !role) {
+          fullName = `${person.firstName} ${person.lastName}`;
+          email = person.email;
+          phone = person.whatsapp;
+          role = person.profile || 'Seguidor';
+        }
+
+        const update = { $addToSet: { attendance: { attendeeId, fullName, email, phone, role, checkIn: new Date() } } };
+        const result = await this.eventModel.findByIdAndUpdate(id, update, { new: true });
+        if (!result) throw new NotFoundException('Evento no encontrado');
+
+        return {
+          message: 'Asistencia marcada',
+          statusCode: 200,
+          status: 'Success',
+          data: [result],
+          meta: { 
+            totalData: 1,
+            currentlyAttended: result.attendance?.length || 0,
+            capacity: result.capacity
+          },
+        };
+      } else {
+        // Desmarcar asistencia
+        const update = { $pull: { attendance: { attendeeId: attendeeId } } };
+        const result = await this.eventModel.findByIdAndUpdate(id, update, { new: true });
+        if (!result) throw new NotFoundException('Evento no encontrado');
+
+        return {
+          message: 'Asistencia removida',
+          statusCode: 200,
+          status: 'Success',
+          data: [result],
+          meta: { 
+            totalData: 1,
+            currentlyAttended: result.attendance?.length || 0,
+            capacity: result.capacity
+          },
+        };
+      }
     } catch (error) {
-      throw new BadRequestException('Error al actualizar asistencia: ' + error.message);
+      throw error instanceof BadRequestException || error instanceof NotFoundException 
+        ? error 
+        : new BadRequestException('Error al actualizar asistencia: ' + error.message);
     }
   }
 

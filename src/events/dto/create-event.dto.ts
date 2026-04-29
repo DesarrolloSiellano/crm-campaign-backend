@@ -7,7 +7,8 @@ export class CreateEventDto {
     location?: string;
     type: 'PRESENCIAL' | 'VIRTUAL';
     link?: string;
-    assignedLeaderIds: Object[];
+    assignedLeaderIds: string[];
+    capacity: number;
     company: string;
     campaign?: any;
     idUserCreation: string;
