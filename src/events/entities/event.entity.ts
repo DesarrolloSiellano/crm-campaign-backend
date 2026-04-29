@@ -17,7 +17,14 @@ export interface Event extends Document {
     createdDate: string;
     createdHour: string;
     idUserCreation: string;
-
+    attendance?: {
+        attendeeId: string;
+        fullName: string;
+        email: string;
+        phone: string;
+        role: string;
+        checkIn: Date;
+    }[];
 }
 
 export const EventSchema = new Schema({
@@ -36,6 +43,14 @@ export const EventSchema = new Schema({
     createdDate: { type: String, default: new Date().toISOString().split('T')[0] },
     createdHour: { type: String, default: new Date().toISOString().split('T')[1].split('.')[0] },
     idUserCreation: { type: String, required: true },
+    attendance: [{
+        attendeeId: { type: String },
+        fullName: { type: String },
+        email: { type: String },
+        phone: { type: String },
+        role: { type: String },
+        checkIn: { type: Date, default: Date.now }
+    }],
 });
 
 export const EventModel = model<Event>('Event', EventSchema);
