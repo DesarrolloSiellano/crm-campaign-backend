@@ -104,6 +104,14 @@ export class EventsController {
     return this.eventsService.update(id, updateEventDto);
   }
 
+  @Patch(':id/attendance')
+  toggleAttendance(
+    @Param('id') id: string,
+    @Body() attendanceDto: { attendeeId: string, fullName: string, email: string, phone: string, role: string, status: boolean }
+  ) {
+    return this.eventsService.toggleAttendance(id, attendanceDto);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.eventsService.remove(id);

@@ -196,6 +196,30 @@ export class EventsService {
     }
   }
 
+  async toggleAttendance(id: string, attendanceDto: { attendeeId: string, fullName: string, email: string, phone: string, role: string, status: boolean }) {
+    try {
+      const { attendeeId, fullName, email, phone, role, status } = attendanceDto;
+
+      const update = status
+        ? { $addToSet: { attendance: { attendeeId, fullName, email, phone, role, checkIn: new Date() } } }
+        : { $pull: { attendance: { attendeeId: attendeeId } } };
+
+      const result = await this.eventModel.findByIdAndUpdate(id, update, { new: true });
+
+      if (!result) throw new NotFoundException('Evento no encontrado');
+
+      return {
+        message: status ? 'Asistencia marcada' : 'Asistencia removida',
+        statusCode: 200,
+        status: 'Success',
+        data: [result],
+        meta: { totalData: 1 },
+      };
+    } catch (error) {
+      throw new BadRequestException('Error al actualizar asistencia: ' + error.message);
+    }
+  }
+
   async remove(id: string) {
     const result = await this.eventModel.findByIdAndDelete(id);
     if (!result) throw new NotFoundException('Evento no encontrado');
