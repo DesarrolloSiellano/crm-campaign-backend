@@ -13,6 +13,7 @@ import { AuthModule } from './core/modules/auth.module';
 import { EventsModule } from './events/events.module';
 
 
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -28,7 +29,7 @@ import { EventsModule } from './events/events.module';
     MultilevelModule,
     CampaignsModule,
     AuthModule,
-    EventsModule
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

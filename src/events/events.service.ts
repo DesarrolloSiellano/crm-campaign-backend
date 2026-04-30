@@ -322,6 +322,22 @@ export class EventsService {
           role = person.profile || 'Seguidor';
         }
 
+        // 4. Verificar si ya está registrado
+        const alreadyAttended = event.attendance?.some(a => a.attendeeId === attendeeId);
+        if (alreadyAttended) {
+          return {
+            message: 'Asistencia ya registrada anteriormente',
+            statusCode: 200,
+            status: 'Warning',
+            data: [event],
+            meta: { 
+              totalData: 1,
+              currentlyAttended: event.attendance?.length || 0,
+              capacity: event.capacity
+            },
+          };
+        }
+
         const update = { $addToSet: { attendance: { attendeeId, fullName, email, phone, role, checkIn: new Date() } } };
         const result = await this.eventModel.findByIdAndUpdate(id, update, { new: true });
         if (!result) throw new NotFoundException('Evento no encontrado');
