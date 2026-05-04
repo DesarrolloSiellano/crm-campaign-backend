@@ -14,6 +14,10 @@ import { EventsModule } from './events/events.module';
 
 
 
+import { DigitalCardModule } from './digital-card/digital-card.module';
+
+import { ProxyController } from './shared/controllers/proxy.controller';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -27,11 +31,11 @@ import { EventsModule } from './events/events.module';
     LeadersModule,
     CampaignsModule,
     MultilevelModule,
-    CampaignsModule,
     AuthModule,
     EventsModule,
+    DigitalCardModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, ProxyController],
   providers: [AppService],
 })
 export class AppModule { }

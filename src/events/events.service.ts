@@ -116,7 +116,7 @@ export class EventsService {
       const data = attendees.map(person => {
         const profile = person.profile || 'Seguidor';
         const isLeader = /^L[íi]der/i.test(profile);
-        
+
         return {
           id: person._id.toString(),
           fullName: person.fullName,
@@ -303,7 +303,7 @@ export class EventsService {
 
         // 2. Buscar a la persona en multilevels para validar jerarquía y obtener datos
         const personFound = await this.multilevelModel.findById(attendeeId);
-        if (!personFound) throw new NotFoundException('La persona no existe en la red multinivel');
+        if (!personFound) throw new NotFoundException('La persona no esta asignada a esta reunión.');
         const person = personFound as any;
 
         // 3. VALIDACIÓN DE JERARQUÍA: ¿Es líder asignado o seguidor de un líder asignado?
@@ -330,7 +330,7 @@ export class EventsService {
             statusCode: 200,
             status: 'Warning',
             data: [event],
-            meta: { 
+            meta: {
               totalData: 1,
               currentlyAttended: event.attendance?.length || 0,
               capacity: event.capacity
@@ -347,7 +347,7 @@ export class EventsService {
           statusCode: 200,
           status: 'Success',
           data: [result],
-          meta: { 
+          meta: {
             totalData: 1,
             currentlyAttended: result.attendance?.length || 0,
             capacity: result.capacity
@@ -364,7 +364,7 @@ export class EventsService {
           statusCode: 200,
           status: 'Success',
           data: [result],
-          meta: { 
+          meta: {
             totalData: 1,
             currentlyAttended: result.attendance?.length || 0,
             capacity: result.capacity
@@ -372,8 +372,8 @@ export class EventsService {
         };
       }
     } catch (error) {
-      throw error instanceof BadRequestException || error instanceof NotFoundException 
-        ? error 
+      throw error instanceof BadRequestException || error instanceof NotFoundException
+        ? error
         : new BadRequestException('Error al actualizar asistencia: ' + error.message);
     }
   }
