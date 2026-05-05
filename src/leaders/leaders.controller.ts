@@ -16,12 +16,12 @@ import {
 import { LeadersService } from './leaders.service';
 import { CreateLeaderDto } from './dto/create-leader.dto';
 import { UpdateLeaderDto } from './dto/update-leader.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 import { UpdateCampaignDto } from 'src/campaigns/dto/update-campaign.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 //TODO: organizar la documentacion swagger
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(JwtAuthGuard)
 @Controller('leaders')
 export class LeadersController {
   constructor(private readonly leadersService: LeadersService) { }

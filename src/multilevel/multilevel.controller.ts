@@ -15,7 +15,7 @@ import {
 import { MultilevelService } from './multilevel.service';
 import { CreateMultilevelDto } from './dto/create-multilevel.dto';
 import { UpdateMultilevelDto } from './dto/update-multilevel.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 
 @Controller('multilevel')
 export class MultilevelController {
@@ -27,7 +27,7 @@ export class MultilevelController {
   }
 
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get('findByGeo')
   findByGeo(
     @Req() req: any,
@@ -80,13 +80,13 @@ export class MultilevelController {
 
 
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get()
   findAll() {
     return this.multilevelService.findAll();
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get('findByPage')
   findByPage(
     @Req() req: any,
@@ -115,19 +115,19 @@ export class MultilevelController {
     );
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get('findByIdParentLevel')
   findByIdParentLevel(@Query('idParentLevel') id: string) {
     return this.multilevelService.findByIdParentLevel(id);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.multilevelService.findOne(id);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
   update(
     @Param('id') id: string,
@@ -136,7 +136,7 @@ export class MultilevelController {
     return this.multilevelService.update(id, updateMultilevelDto);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.multilevelService.remove(id);

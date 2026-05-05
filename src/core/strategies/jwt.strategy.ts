@@ -27,7 +27,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         const user = await lastValueFrom(
             this.userClient.send({ cmd: 'findUserById' }, _id),
         );
-
         if (!user) {
             throw new UnauthorizedException('Token no valid');
         }
