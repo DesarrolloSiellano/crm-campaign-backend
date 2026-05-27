@@ -13,7 +13,7 @@ export class ProxyController {
     try {
       const response = await axios.get(url, { responseType: 'arraybuffer' });
       const contentType = response.headers['content-type'];
-      
+
       res.setHeader('Content-Type', contentType);
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.send(response.data);

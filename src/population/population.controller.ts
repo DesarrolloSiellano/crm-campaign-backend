@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { PopulationService } from './population.service';
 import { CreatePopulationDto } from './dto/create-population.dto';
 import { UpdatePopulationDto } from './dto/update-population.dto';
@@ -20,7 +28,10 @@ export class PopulationController {
 
   @Get(':document')
   @ApiOperation({ summary: 'Obtener una persona por Documento' })
-  @ApiParam({ name: 'document', description: 'número de documento de la persona' })
+  @ApiParam({
+    name: 'document',
+    description: 'número de documento de la persona',
+  })
   @ApiResponse({
     status: 200,
     description: 'Persona encontrado',
@@ -41,7 +52,7 @@ export class PopulationController {
     description: 'Persona no encontrada',
   })
   findByDocument(@Param('document') document: string) {
-    return this.populationService.findByDocument( document);
+    return this.populationService.findByDocument(document);
   }
 
   @Get('findByQueryWorld/:world')
@@ -62,7 +73,7 @@ export class PopulationController {
       },
     },
   })
-  findByQueryWorld( @Param('world') world: string) {
+  findByQueryWorld(@Param('world') world: string) {
     return this.populationService.findByQueryWorld(world);
   }
 
@@ -72,7 +83,10 @@ export class PopulationController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePopulationDto: UpdatePopulationDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updatePopulationDto: UpdatePopulationDto,
+  ) {
     return this.populationService.update(+id, updatePopulationDto);
   }
 

@@ -30,11 +30,11 @@ export interface Module {
   description: string;
   created: Date;
   modified?: Date;
-  dateCreated?: String;
-  hourCreated?: String;
-  dateModified?: String;
-  hourModified?: String;
-  idUserModified?: String;
+  dateCreated?: string;
+  hourCreated?: string;
+  dateModified?: string;
+  hourModified?: string;
+  idUserModified?: string;
   isActive: boolean;
   isSystemModule: boolean;
   router: Route[];
@@ -47,7 +47,7 @@ export interface Route {
   children?: Route[]; // Opcional, arreglo de rutas hijas
 }
 
-export interface Permission  {
+export interface Permission {
   name: string;
   description: string;
   action: string; // `create`, `read`, `update`, `delete`, etc.
@@ -57,14 +57,13 @@ export interface Permission  {
   rol?: Rol; // Relación con el Rol
   created: Date;
   modified: Date;
-  dateCreated?: String;
-  hourCreated?: String;
-  dateModified?: String;
-  hourModified?: String;
-  idUserModified?: String;
+  dateCreated?: string;
+  hourCreated?: string;
+  dateModified?: string;
+  hourModified?: string;
+  idUserModified?: string;
   isActive: boolean;
 }
-
 
 export interface Rol extends Document {
   name: string;
@@ -73,15 +72,14 @@ export interface Rol extends Document {
   created: Date;
   modiefied: Date;
   isActive: boolean;
-  dateCreated?: String;
-  hourCreated?: String;
-  dateModified?: String;
-  hourModified?: String;
+  dateCreated?: string;
+  hourCreated?: string;
+  dateModified?: string;
+  hourModified?: string;
   idUserModified?: string;
   isInheritPermissions?: boolean;
-  permissions: Permission[]
+  permissions: Permission[];
 }
-
 
 export class ChangePassword {
   id: string;

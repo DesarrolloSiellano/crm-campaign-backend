@@ -1,10 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { tenantPlugin } from 'src/core/database/tenant.plugin';
 
 export type DigitalCardDocument = DigitalCard & Document;
 
 @Schema({ timestamps: true })
 export class DigitalCard {
+  @Prop({ required: true, index: true })
+  tenantId: string;
+
   @Prop({ required: true, unique: true })
   company: string;
 
@@ -37,3 +41,4 @@ export class DigitalCard {
 }
 
 export const DigitalCardSchema = SchemaFactory.createForClass(DigitalCard);
+DigitalCardSchema.plugin(tenantPlugin);

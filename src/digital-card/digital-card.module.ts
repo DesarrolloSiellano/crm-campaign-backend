@@ -6,10 +6,12 @@ import { DigitalCard, DigitalCardSchema } from './schemas/digital-card.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: DigitalCard.name, schema: DigitalCardSchema }])
+    MongooseModule.forFeature([
+      { name: DigitalCard.name, schema: DigitalCardSchema },
+    ]),
   ],
   controllers: [DigitalCardController],
   providers: [DigitalCardService],
-  exports: [DigitalCardService]
+  exports: [DigitalCardService],
 })
 export class DigitalCardModule {}

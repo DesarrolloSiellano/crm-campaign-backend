@@ -59,7 +59,6 @@ export class CampaignsController {
     @Query('global') global?: string,
     @Query('filters') filters?: string,
   ) {
-    
     const user = req.user;
 
     if (!user) {

@@ -24,7 +24,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @UseGuards(JwtAuthGuard)
 @Controller('leaders')
 export class LeadersController {
-  constructor(private readonly leadersService: LeadersService) { }
+  constructor(private readonly leadersService: LeadersService) {}
 
   @Post()
   create(@Body() createLeaderDto: CreateLeaderDto) {
@@ -120,7 +120,6 @@ export class LeadersController {
     @Query('global') global?: string,
     @Query('filters') filters?: string,
   ) {
-
     const user = req.user;
 
     if (!user) {
@@ -128,12 +127,15 @@ export class LeadersController {
     }
 
     if (!user.isActived) {
-      throw new UnauthorizedException('User is not active, please talk to the administrator');
+      throw new UnauthorizedException(
+        'User is not active, please talk to the administrator',
+      );
     }
 
-
     if (!user.isAdmin) {
-      throw new UnauthorizedException('User is not admin, please talk to the administrator');
+      throw new UnauthorizedException(
+        'User is not admin, please talk to the administrator',
+      );
     }
 
     // Convierte from y limite a número, o usa valores por defecto
@@ -144,7 +146,7 @@ export class LeadersController {
       limiteNumber,
       global,
       filters,
-      user.company
+      user.company,
     );
   }
 

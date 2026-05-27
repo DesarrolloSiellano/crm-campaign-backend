@@ -19,13 +19,12 @@ import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 
 @Controller('multilevel')
 export class MultilevelController {
-  constructor(private readonly multilevelService: MultilevelService) { }
+  constructor(private readonly multilevelService: MultilevelService) {}
 
   @Post()
   create(@Body() createMultilevelDto: CreateMultilevelDto) {
     return this.multilevelService.create(createMultilevelDto);
   }
-
 
   @UseGuards(JwtAuthGuard)
   @Get('findByGeo')
@@ -47,10 +46,9 @@ export class MultilevelController {
       city,
       campaign,
       user.company,
-      idParentLevel
+      idParentLevel,
     );
   }
-
 
   @Get('/findByWhatsApps')
   findByWhatsapps(
@@ -77,8 +75,6 @@ export class MultilevelController {
   findByEmail(@Param('email') email: string) {
     return this.multilevelService.findByEmail(email);
   }
-
-
 
   @UseGuards(JwtAuthGuard)
   @Get()

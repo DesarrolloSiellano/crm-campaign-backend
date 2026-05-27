@@ -12,7 +12,6 @@ import { Leader } from './entities/leader.entity';
 import { Multilevel } from 'src/multilevel/entities/multilevel.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import * as generatePassword from 'generate-password';
 import { ROLES } from './helpers/roles';
 import { PERMISSIONS } from './helpers/permissions';
 import { MODULES } from './helpers/modules';
@@ -31,7 +30,7 @@ export class LeadersService {
     @InjectModel('Multilevel')
     private readonly multilevelModel: Model<Multilevel>,
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
-    private configService: ConfigService
+    private configService: ConfigService,
   ) {
     this.STORAGE_API_URL = this.configService.get('DOCUMENT_STORAGE_API')!;
   }
@@ -149,7 +148,7 @@ export class LeadersService {
       if (error.code === 11000) {
         throw new BadRequestException(
           'Duplicate key error: Leader already exists ' +
-          JSON.stringify(error.keyValue),
+            JSON.stringify(error.keyValue),
         );
       }
       throw new BadRequestException('Error creating leader: ' + error.message);
@@ -158,7 +157,9 @@ export class LeadersService {
 
   async updateCampaign(company: string, campaign: UpdateCampaignDto) {
     try {
-      const campaignResult = await this.campaignModel.findById(campaign._id);
+      const campaignResult = await this.campaignModel
+        .findById(campaign._id)
+        .lean();
 
       if (!campaignResult) {
         throw new NotFoundException('Campaign not found');
@@ -200,7 +201,9 @@ export class LeadersService {
 
   async updateCampaignByLeader(_id: string, campaign: UpdateCampaignDto) {
     try {
-      const campaignResult = await this.campaignModel.findById(campaign._id);
+      const campaignResult = await this.campaignModel
+        .findById(campaign._id)
+        .lean();
 
       if (!campaignResult) {
         throw new NotFoundException('Campaign not found');
@@ -218,6 +221,7 @@ export class LeadersService {
         {
           new: true, // Devuelve el documento actualizado
           runValidators: true, // Aplica validaciones del schema
+          lean: true,
         },
       );
 
@@ -242,7 +246,7 @@ export class LeadersService {
   }
 
   async findAll() {
-    const result = await this.leaderModel.find();
+    const result = await this.leaderModel.find().lean();
     if (!result || result.length === 0) {
       throw new NotFoundException('No leader found');
     }
@@ -258,7 +262,7 @@ export class LeadersService {
   }
 
   async findOne(id: string) {
-    const result = await this.leaderModel.findById(id);
+    const result = await this.leaderModel.findById(id).lean();
     if (!result) {
       throw new NotFoundException('Leader not found by id');
     }
@@ -274,7 +278,7 @@ export class LeadersService {
   }
 
   async findByEmail(email: string) {
-    const result = await this.leaderModel.findOne({ email: email });
+    const result = await this.leaderModel.findOne({ email: email }).lean();
     if (!result) {
       throw new NotFoundException('Leader not found by email');
     }
@@ -289,9 +293,15 @@ export class LeadersService {
     };
   }
 
-  async findByPage(from?: number, limit?: number, global?: any, filters?: any, company?: string) {
+  async findByPage(
+    from?: number,
+    limit?: number,
+    global?: any,
+    filters?: any,
+    company?: string,
+  ) {
     const query: any = {
-      company: company
+      company: company,
     };
 
     // Búsqueda global en varios campos
@@ -310,7 +320,8 @@ export class LeadersService {
     const leaders = await this.leaderModel
       .find(query)
       .skip(skipNumber)
-      .limit(limitNumber);
+      .limit(limitNumber)
+      .lean();
     const totalData = await this.leaderModel.countDocuments(query);
     return {
       statusCode: 200,
@@ -343,8 +354,7 @@ export class LeadersService {
       query.ciudad = city;
     }
 
-
-    const results = await this.leaderModel.find(query);
+    const results = await this.leaderModel.find(query).lean();
 
     // Mapear solo los campos deseados y concatenar nombre completo
     const data = results.map((geo: any) => ({
@@ -448,7 +458,7 @@ export class LeadersService {
       const result = await this.leaderModel.findByIdAndUpdate(
         id,
         updateLeaderDto,
-        { new: true, runValidators: true },
+        { new: true, runValidators: true, lean: true },
       );
       if (!result) {
         throw new NotFoundException('Leader not found');
@@ -471,7 +481,7 @@ export class LeadersService {
       if (error.code === 11000) {
         throw new BadRequestException(
           'Duplicate key error: Leader already exists ' +
-          JSON.stringify(error.keyValue),
+            JSON.stringify(error.keyValue),
         );
       }
       throw new BadRequestException('Error updating leader: ' + error.message);
@@ -480,13 +490,15 @@ export class LeadersService {
 
   async remove(id: string) {
     try {
-      const result = await this.leaderModel.findByIdAndDelete(id);
+      const result = await this.leaderModel.findByIdAndDelete(id).lean();
 
       const deleteFoto = await this.deleteProfileFoto(result?.uuidFoto || '');
-      const resultMultilevel = await this.multilevelModel.findOneAndDelete({
-        idInvited: id,
-        idParentLevel: id,
-      });
+      const resultMultilevel = await this.multilevelModel
+        .findOneAndDelete({
+          idInvited: id,
+          idParentLevel: id,
+        })
+        .lean();
 
       if (!result) {
         throw new NotFoundException('Leader not found');
@@ -547,7 +559,7 @@ export class LeadersService {
         originalNameFoto: externalResponse[0].original_filename,
         uuidFoto: externalResponse[0].uuid,
       },
-      { new: true },
+      { new: true, lean: true },
     );
 
     return {
@@ -563,15 +575,12 @@ export class LeadersService {
     };
   }
 
-
   async deleteProfileFoto(uuid: string) {
     const response = await firstValueFrom(
-      this.http.delete(
-        `${this.STORAGE_API_URL}/images/${uuid}`,
-      ),
+      this.http.delete(`${this.STORAGE_API_URL}/images/${uuid}`),
     );
 
-    return response.data
+    return response.data;
   }
 
   private async forwardToExternalAPI(file: Express.Multer.File): Promise<any> {
@@ -584,10 +593,7 @@ export class LeadersService {
     formData.append('images', blob, file.originalname);
 
     const response = await firstValueFrom(
-      this.http.post(
-        `${this.STORAGE_API_URL}/upload-images`,
-        formData,
-      ),
+      this.http.post(`${this.STORAGE_API_URL}/upload-images`, formData),
     );
 
     return response.data; // { url: "https://cdn.documentstorate.com/xxx.jpg" }
