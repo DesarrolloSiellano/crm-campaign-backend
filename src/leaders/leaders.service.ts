@@ -12,9 +12,6 @@ import { Leader } from './entities/leader.entity';
 import { Multilevel } from 'src/multilevel/entities/multilevel.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { ROLES } from './helpers/roles';
-import { PERMISSIONS } from './helpers/permissions';
-import { MODULES } from './helpers/modules';
 import { UpdateCampaignDto } from 'src/campaigns/dto/update-campaign.dto';
 import { Campaign } from '../campaigns/entities/campaign.entity';
 import { HttpService } from '@nestjs/axios';
@@ -38,11 +35,6 @@ export class LeadersService {
   async create(createLeaderDto: CreateLeaderDto) {
     try {
       const result = new this.leaderModel(createLeaderDto);
-      await result.save();
-
-      if (!result) {
-        throw new NotFoundException('Leader not created');
-      }
 
       const multilevelData = {
         idInvited: result._id,
@@ -62,11 +54,49 @@ export class LeadersService {
       };
 
       const resultMultilevel = new this.multilevelModel(multilevelData);
-      await resultMultilevel.save();
 
-      let response = {};
+      // Guardamos concurrentemente para optimizar el rendimiento y disminuir latencias locales
+      await Promise.all([result.save(), resultMultilevel.save()]);
 
-      if (resultMultilevel) {
+      let response: any = {
+        message: 'Leader created successfully',
+        statusCode: 201,
+        status: 'Success',
+        data: [result],
+        meta: {
+          totalData: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          idLeader: result._id,
+          idMultilevel: resultMultilevel._id,
+          multilevelMessage: 'Multilevel created successfully',
+          multilevel: resultMultilevel,
+        },
+      };
+
+      const userPayload = {
+        _id: result._id,
+        name: result.nombres,
+        lastName: result.apellidos,
+        email: result.email,
+        phone: result.celular,
+        redirectUri: createLeaderDto.redirectUri || null,
+        roles: [{ roleCode: 'LDE', roleName: 'Líder' }],
+        permissions: ['Crear', 'Editar', 'eliminar', 'Buscar'],
+        allowNameModule: 'crmCampaign',
+        allowedRoutes: ['/dashboard', '/multilevel', '/followers'],
+        company: createLeaderDto.company || 'default_company',
+        isActived: true,
+        isAdmin: false,
+        isSuperAdmin: false,
+        isNewUser: true,
+      };
+
+      const userResponse = await firstValueFrom(
+        this.userClient.send({ cmd: 'createExternalUser' }, userPayload),
+      );
+
+      if (userResponse.statusCode === 201 || userResponse.statusCode === 200) {
         response = {
           message: 'Leader created successfully',
           statusCode: 201,
@@ -80,67 +110,10 @@ export class LeadersService {
             idMultilevel: resultMultilevel._id,
             multilevelMessage: 'Multilevel created successfully',
             multilevel: resultMultilevel,
+            userMessage: 'User created successfully',
+            user: userResponse,
           },
         };
-      } else {
-        response = {
-          message: 'Leader created successfully',
-          statusCode: 207,
-          status: 'Partial Success',
-          data: [result],
-          meta: {
-            totalData: 1,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            idLeader: result._id,
-            idMultilevel: null,
-            multilevelMessage: 'Multilevel not created',
-            multilevel: null,
-          },
-        };
-      }
-
-      const userPayload = {
-        _id: result._id,
-        name: result.nombres,
-        lastName: result.apellidos,
-        email: result.email,
-        phone: result.celular,
-        redirectUri: createLeaderDto.redirectUri || null,
-        role: ROLES,
-        permissions: PERMISSIONS,
-        modules: MODULES,
-        company: createLeaderDto.company || 'default_company',
-        isActived: true,
-        isAdmin: false,
-        isSuperAdmin: false,
-        isNewUser: true,
-      };
-
-      const userResponse = await firstValueFrom(
-        this.userClient.send({ cmd: 'createUser' }, userPayload),
-      );
-
-      if (userResponse.statusCode === 201 || userResponse.statusCode === 200) {
-        {
-          response = {
-            message: 'Leader created successfully',
-            statusCode: 201,
-            status: 'Success',
-            data: [result],
-            meta: {
-              totalData: 1,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              idLeader: result._id,
-              idMultilevel: resultMultilevel._id,
-              multilevelMessage: 'Multilevel created successfully',
-              multilevel: resultMultilevel,
-              userMessage: 'User created successfully',
-              user: userResponse,
-            },
-          };
-        }
       }
 
       return response;

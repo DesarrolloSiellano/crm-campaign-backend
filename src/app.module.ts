@@ -15,9 +15,9 @@ import { DigitalCardModule } from './digital-card/digital-card.module';
 import { ProxyController } from './shared/controllers/proxy.controller';
 import { TenantMiddleware } from './core/database/tenant.middleware';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { ResponseInterceptor } from './campaigns/interceptors/response.interceptor';
-import { IdempotencyModule } from './campaigns/idempotency/idempotency.module';
-import { IdempotencyInterceptor } from './campaigns/interceptors/idempotency.interceptor';
+import { ResponseInterceptor } from './core/interceptors/response.interceptor';
+import { IdempotencyModule } from './core/idempotency/idempotency.module';
+import { IdempotencyInterceptor } from './core/interceptors/idempotency.interceptor';
 
 @Module({
   imports: [
