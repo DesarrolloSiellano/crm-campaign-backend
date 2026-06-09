@@ -15,19 +15,18 @@ import {
 import { MultilevelService } from './multilevel.service';
 import { CreateMultilevelDto } from './dto/create-multilevel.dto';
 import { UpdateMultilevelDto } from './dto/update-multilevel.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 
 @Controller('multilevel')
 export class MultilevelController {
-  constructor(private readonly multilevelService: MultilevelService) { }
+  constructor(private readonly multilevelService: MultilevelService) {}
 
   @Post()
   create(@Body() createMultilevelDto: CreateMultilevelDto) {
     return this.multilevelService.create(createMultilevelDto);
   }
 
-
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get('findByGeo')
   findByGeo(
     @Req() req: any,
@@ -47,10 +46,9 @@ export class MultilevelController {
       city,
       campaign,
       user.company,
-      idParentLevel
+      idParentLevel,
     );
   }
-
 
   @Get('/findByWhatsApps')
   findByWhatsapps(
@@ -78,15 +76,13 @@ export class MultilevelController {
     return this.multilevelService.findByEmail(email);
   }
 
-
-
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get()
   findAll() {
     return this.multilevelService.findAll();
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get('findByPage')
   findByPage(
     @Req() req: any,
@@ -111,23 +107,23 @@ export class MultilevelController {
       global,
       filters,
       idParentLevel,
-      user.company,
+      user,
     );
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get('findByIdParentLevel')
   findByIdParentLevel(@Query('idParentLevel') id: string) {
     return this.multilevelService.findByIdParentLevel(id);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.multilevelService.findOne(id);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
   update(
     @Param('id') id: string,
@@ -136,7 +132,7 @@ export class MultilevelController {
     return this.multilevelService.update(id, updateMultilevelDto);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.multilevelService.remove(id);

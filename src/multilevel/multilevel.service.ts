@@ -18,7 +18,7 @@ export class MultilevelService {
     private readonly multilevelModel: Model<Multilevel>,
     @InjectModel('Leader')
     private readonly leaderModel: Model<Leader>,
-  ) { }
+  ) {}
   async create(createMultilevelDto: CreateMultilevelDto) {
     try {
       createMultilevelDto.level = createMultilevelDto.level + 1;
@@ -39,9 +39,11 @@ export class MultilevelService {
         createMultilevelDto.levelShow = '4';
       }
 
-      const leader = await this.leaderModel.findOne({
-        _id: createMultilevelDto.idParentLevel,
-      });
+      const leader = await this.leaderModel
+        .findOne({
+          _id: createMultilevelDto.idParentLevel,
+        })
+        .lean();
 
       createMultilevelDto.campaign = leader?.campaign || {};
       createMultilevelDto.company = leader?.company || '';
@@ -69,15 +71,17 @@ export class MultilevelService {
       if (error.code === 11000) {
         throw new BadRequestException(
           'Duplicate key error: Follower already exists ' +
-          JSON.stringify(error.keyValue),
+            JSON.stringify(error.keyValue),
         );
       }
-      throw new BadRequestException('Error creating Follower: ' + error.message);
+      throw new BadRequestException(
+        'Error creating Follower: ' + error.message,
+      );
     }
   }
 
   async findAll() {
-    const result = await this.multilevelModel.find();
+    const result = await this.multilevelModel.find().lean();
     if (!result || result.length === 0) {
       throw new NotFoundException('No multilevel found');
     }
@@ -93,8 +97,8 @@ export class MultilevelService {
     };
   }
 
-  findOne(id: string) {
-    const result = this.multilevelModel.findById(id);
+  async findOne(id: string) {
+    const result = await this.multilevelModel.findById(id).lean();
     if (!result) {
       throw new NotFoundException('Multilevel not found by id');
     }
@@ -110,7 +114,7 @@ export class MultilevelService {
   }
 
   async findByWhatsapp(whatsapp: string) {
-    const result = await this.multilevelModel.findOne({ whatsapp });
+    const result = await this.multilevelModel.findOne({ whatsapp }).lean();
     if (!result) {
       throw new NotFoundException('Multilevel not found by whatsapp');
     }
@@ -127,9 +131,11 @@ export class MultilevelService {
   }
 
   async findByWhatsapps(whatsapps: string[]) {
-    const result = await this.multilevelModel.find({
-      whatsapp: { $in: whatsapps },
-    });
+    const result = await this.multilevelModel
+      .find({
+        whatsapp: { $in: whatsapps },
+      })
+      .lean();
 
     if (!result.length) {
       throw new NotFoundException('Multilevel not found by whatsapps');
@@ -142,13 +148,13 @@ export class MultilevelService {
       data: result,
       meta: {
         totalData: result.length,
-        idsMultilevel: result.map(item => item._id),
+        idsMultilevel: result.map((item) => item._id),
       },
     };
   }
 
   async findByEmail(email: string) {
-    const result = await this.multilevelModel.findOne({ email });
+    const result = await this.multilevelModel.findOne({ email }).lean();
     if (!result) {
       throw new NotFoundException('Multilevel not found by email');
     }
@@ -165,9 +171,11 @@ export class MultilevelService {
   }
 
   async findByEmails(emails: string[]) {
-    const result = await this.multilevelModel.find({
-      email: { $in: emails },
-    });
+    const result = await this.multilevelModel
+      .find({
+        email: { $in: emails },
+      })
+      .lean();
 
     if (!result.length) {
       throw new NotFoundException('Multilevel not found by emails');
@@ -180,7 +188,7 @@ export class MultilevelService {
       data: result,
       meta: {
         totalData: result.length,
-        idsMultilevel: result.map(item => item._id),
+        idsMultilevel: result.map((item) => item._id),
       },
     };
   }
@@ -190,7 +198,7 @@ export class MultilevelService {
     city: string,
     campaign: string,
     company: string,
-    idParentLevel: string
+    idParentLevel: string,
   ) {
     let query: any = {};
 
@@ -210,7 +218,7 @@ export class MultilevelService {
       query.city = city;
     }
 
-    const results = await this.multilevelModel.find(query);
+    const results = await this.multilevelModel.find(query).lean();
 
     // Mapear solo los campos deseados y concatenar nombre completo
     const data = results.map((geo: any) => ({
@@ -235,7 +243,9 @@ export class MultilevelService {
   }
 
   async findByIdParentLevel(id: string) {
-    const result = this.multilevelModel.find({ idParentLevel: id });
+    const result = await this.multilevelModel
+      .find({ idParentLevel: id })
+      .lean();
     if (!result) {
       throw new NotFoundException('Multilevel not found by idParentLevel');
     }
@@ -256,13 +266,22 @@ export class MultilevelService {
     global?: any,
     filters?: any,
     idParentLevel?: string,
-    company?: string,
+    user?: any,
   ) {
     const query: any = {
-      company: company,
-      idParentLevel: idParentLevel,
-      level: { $ne: 1 }  // <-- Filtro: level diferente de 1
+      company: user.company,
+      level: { $ne: 1 }, // <-- Filtro: level diferente de 1
     };
+
+    if (
+      idParentLevel &&
+      idParentLevel !== '' &&
+      idParentLevel !== 'undefined' &&
+      !user.isAdmin &&
+      !user.isSuperAdmin
+    ) {
+      query.idParentLevel = idParentLevel;
+    }
 
     // Búsqueda global en varios campos
     if (global) {
@@ -280,7 +299,8 @@ export class MultilevelService {
     const followers = await this.multilevelModel
       .find(query)
       .skip(skipNumber)
-      .limit(limitNumber);
+      .limit(limitNumber)
+      .lean();
     const totalData = await this.multilevelModel.countDocuments(query);
 
     return {
@@ -299,7 +319,7 @@ export class MultilevelService {
       const result = await this.multilevelModel.findByIdAndUpdate(
         id,
         updateMultilevelDto,
-        { new: true, runValidators: true },
+        { new: true, runValidators: true, lean: true },
       );
       if (!result) {
         throw new NotFoundException('Multilevel not found');
@@ -319,7 +339,7 @@ export class MultilevelService {
       if (error.code === 11000) {
         throw new BadRequestException(
           'Duplicate key error: Multilevel already exists ' +
-          JSON.stringify(error.keyValue),
+            JSON.stringify(error.keyValue),
         );
       }
       throw new BadRequestException(
@@ -329,7 +349,7 @@ export class MultilevelService {
   }
 
   async remove(id: string) {
-    const result = await this.multilevelModel.findByIdAndDelete(id);
+    const result = await this.multilevelModel.findByIdAndDelete(id).lean();
     if (!result) {
       throw new NotFoundException('Multilevel not found');
     }
@@ -346,7 +366,3 @@ export class MultilevelService {
     };
   }
 }
-
-
-
-

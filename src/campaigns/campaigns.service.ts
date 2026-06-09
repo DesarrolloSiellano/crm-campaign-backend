@@ -47,7 +47,8 @@ export class CampaignsService {
   }
 
   async findAll() {
-    const result = await this.campaignModel.find();
+    await this.autoCloseExpiredCampaigns();
+    const result = await this.campaignModel.find().lean();
     if (!result || result.length === 0) {
       throw new NotFoundException('No Campaign found');
     }
@@ -63,7 +64,8 @@ export class CampaignsService {
   }
 
   async findByCompany(company: string) {
-    const result = await this.campaignModel.find({ company: company });
+    await this.autoCloseExpiredCampaigns();
+    const result = await this.campaignModel.find({ company: company }).lean();
 
     if (!result) {
       throw new NotFoundException('Campaign not found by company');
@@ -79,12 +81,21 @@ export class CampaignsService {
     };
   }
 
-  async findByAutocomplete(autocomplete: string, company: string) {
-    const result = await this.campaignModel.find({
+  async findByAutocomplete(autocomplete: string, company: string, status?: string) {
+    await this.autoCloseExpiredCampaigns();
+    const query: any = {
       company: company,
       name: new RegExp(autocomplete, 'i'),
-      status: 'ABIERTA',
-    });
+    };
+    if (status) {
+      query.status = status;
+    }
+    
+    const result = await this.campaignModel
+      .find(query)
+      .select('_id name status startDate endDate')
+      .limit(15)
+      .lean();
     if (!result) {
       throw new NotFoundException('Campaign not found by name');
     }
@@ -94,18 +105,20 @@ export class CampaignsService {
       status: 'Success',
       data: result,
       meta: {
-        totalData: 1,
+        totalData: result.length,
       },
     };
   }
 
   async findCampaignByLeader(leaderId: string) {
+    await this.autoCloseExpiredCampaigns();
     const campaign = await this.campaignModel
       .findOne({
         status: 'ABIERTA',
         lideres: leaderId,
       })
-      .populate('lideres');
+      .populate('lideres')
+      .lean();
 
     if (!campaign) {
       throw new NotFoundException('No open campaign found for this leader');
@@ -121,7 +134,8 @@ export class CampaignsService {
   }
 
   async findOne(id: string) {
-    const result = await this.campaignModel.findById(id);
+    await this.autoCloseExpiredCampaigns();
+    const result = await this.campaignModel.findById(id).lean();
     if (!result) {
       throw new NotFoundException('Campaign not found by id');
     }
@@ -136,9 +150,16 @@ export class CampaignsService {
     };
   }
 
-  async findByPage(from?: number, limit?: number, global?: any, filters?: any, company?: string) {
+  async findByPage(
+    from?: number,
+    limit?: number,
+    global?: any,
+    filters?: any,
+    company?: string,
+  ) {
+    await this.autoCloseExpiredCampaigns();
     const query: any = {
-      company: company
+      company: company,
     };
 
     // Búsqueda global en varios campos
@@ -152,14 +173,14 @@ export class CampaignsService {
         { endDate: new RegExp(global, 'i') },
       ];
     }
-    
 
     const skipNumber = from && from >= 0 ? from : 0;
     const limitNumber = limit && limit > 0 ? limit : 100;
     const leaders = await this.campaignModel
       .find(query)
       .skip(skipNumber)
-      .limit(limitNumber);
+      .limit(limitNumber)
+      .lean();
     const totalData = await this.campaignModel.countDocuments(query);
     return {
       statusCode: 200,
@@ -173,12 +194,11 @@ export class CampaignsService {
   }
 
   async update(id: string, updateCampaignDto: UpdateCampaignDto) {
-
     try {
       const result = await this.campaignModel.findByIdAndUpdate(
         id,
         updateCampaignDto,
-        { new: true, runValidators: true },
+        { new: true, runValidators: true, lean: true },
       );
       if (!result) {
         throw new NotFoundException('Campaign not found');
@@ -206,7 +226,7 @@ export class CampaignsService {
 
   async remove(id: string) {
     try {
-      const result = await this.campaignModel.findByIdAndDelete(id);
+      const result = await this.campaignModel.findByIdAndDelete(id).lean();
       if (!result) {
         throw new NotFoundException('Campaign not found');
       }
@@ -229,6 +249,23 @@ export class CampaignsService {
       throw new BadRequestException(
         'Error deleting Campaign: ' + error.message,
       );
+    }
+  }
+
+  private async autoCloseExpiredCampaigns(): Promise<void> {
+    try {
+      const todayStr = moment().format('YYYY-MM-DD');
+      await this.campaignModel.updateMany(
+        {
+          status: { $ne: 'CERRADA' },
+          endDate: { $lt: todayStr },
+        },
+        {
+          $set: { status: 'CERRADA', updatedAt: todayStr },
+        },
+      );
+    } catch (error) {
+      console.error('Error auto-closing expired campaigns:', error);
     }
   }
 }

@@ -7,16 +7,15 @@ import { LeaderSchema } from 'src/leaders/entities/leader.entity';
 import { MultilevelSchema } from 'src/multilevel/entities/multilevel.entity';
 import { CampaignSchema } from 'src/campaigns/entities/campaign.entity';
 
-
 @Global()
 @Module({
   imports: [
     MongooseModule.forRootAsync({
-          useFactory: (configService: ConfigService) => ({
-            uri: configService.get<string>('MONGO_URI'), // Lee la URI desde las variables de entorno
-          }),
-          inject: [ConfigService],
-        }),
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGO_URI'), // Lee la URI desde las variables de entorno
+      }),
+      inject: [ConfigService],
+    }),
     MongooseModule.forFeature([
       { name: 'Population', schema: PopulationSchema },
       { name: 'Leader', schema: LeaderSchema },
@@ -24,6 +23,6 @@ import { CampaignSchema } from 'src/campaigns/entities/campaign.entity';
       { name: 'Campaign', schema: CampaignSchema },
     ]),
   ],
-  exports: [MongooseModule]
+  exports: [MongooseModule],
 })
 export class DatabaseModule {}

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './core/database/database.module';
@@ -11,8 +11,13 @@ import { TcpClientModule } from './core/tcp/tcp.module';
 import { StrategyJwtGlobalModule } from './core/modules/strategyJwtModule.module';
 import { AuthModule } from './core/modules/auth.module';
 import { EventsModule } from './events/events.module';
-
-
+import { DigitalCardModule } from './digital-card/digital-card.module';
+import { ProxyController } from './shared/controllers/proxy.controller';
+import { TenantMiddleware } from './core/database/tenant.middleware';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ResponseInterceptor } from './core/interceptors/response.interceptor';
+import { IdempotencyModule } from './core/idempotency/idempotency.module';
+import { IdempotencyInterceptor } from './core/interceptors/idempotency.interceptor';
 
 @Module({
   imports: [
@@ -27,11 +32,26 @@ import { EventsModule } from './events/events.module';
     LeadersModule,
     CampaignsModule,
     MultilevelModule,
-    CampaignsModule,
     AuthModule,
     EventsModule,
+    DigitalCardModule,
+    IdempotencyModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, ProxyController],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: IdempotencyInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+  ],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TenantMiddleware).forRoutes('*');
+  }
+}

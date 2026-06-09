@@ -15,10 +15,10 @@ import {
 import { CampaignsService } from './campaigns.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 
-@UseGuards(AuthGuard('jwt'))
 @Controller('campaigns')
+@UseGuards(JwtAuthGuard)
 export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
   @Post()
@@ -43,12 +43,16 @@ export class CampaignsController {
   }
 
   @Get('findByAutocomplete')
-  findByAutocomplete(@Req() req: any, @Query('name') name: string) {
+  findByAutocomplete(
+    @Req() req: any,
+    @Query('name') name: string,
+    @Query('status') status?: string,
+  ) {
     const user = req.user;
     if (!user) {
       throw new UnauthorizedException('User not authorized');
     }
-    return this.campaignsService.findByAutocomplete(name, user.company);
+    return this.campaignsService.findByAutocomplete(name, user.company, status);
   }
 
   @Get('findByPage')
@@ -59,7 +63,6 @@ export class CampaignsController {
     @Query('global') global?: string,
     @Query('filters') filters?: string,
   ) {
-    
     const user = req.user;
 
     if (!user) {

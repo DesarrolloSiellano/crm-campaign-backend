@@ -34,6 +34,12 @@ jobs:
             # Navegar al directorio del proyecto
             cd /opt/crm-campaign-backend
 
+            # Guardar el commit actual como el último estable antes de actualizar
+            if git rev-parse --git-dir > /dev/null 2>&1; then
+              git rev-parse HEAD > .last_stable_commit
+              echo "Guardada marca del último commit estable: $(cat .last_stable_commit)"
+            fi
+
             # Configurar Git para usar SSH si es necesario
             git remote set-url origin git@github.com:${{ github.repository }}.git
 
@@ -54,4 +60,3 @@ jobs:
             docker compose pull
             docker compose build
             docker compose up -d --remove-orphans
-

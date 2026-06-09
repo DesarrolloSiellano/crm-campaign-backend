@@ -1,14 +1,27 @@
-import { Controller, Get, Post, Body, Param, Delete, Query, Patch, Req, Put, UnauthorizedException, UseGuards, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Query,
+  Patch,
+  Req,
+  Put,
+  UnauthorizedException,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 
-
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(JwtAuthGuard)
 @Controller('events')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) { }
+  constructor(private readonly eventsService: EventsService) {}
 
   @Post()
   create(@Body() createEventDto: CreateEventDto) {
@@ -20,8 +33,6 @@ export class EventsController {
     return this.eventsService.findAll();
   }
 
-
-
   @Get('findByPage')
   findByPage(
     @Req() req: any,
@@ -32,22 +43,22 @@ export class EventsController {
     @Query('idUser') idUser?: string,
     @Query('idCampaign') idCampaign?: string,
   ) {
-
     const user = req.user;
-
-
 
     if (!user) {
       throw new UnauthorizedException('User not authorized');
     }
 
     if (!user.isActived) {
-      throw new UnauthorizedException('User is not active, please talk to the administrator');
+      throw new UnauthorizedException(
+        'User is not active, please talk to the administrator',
+      );
     }
 
-
     if (!user.isAdmin) {
-      throw new UnauthorizedException('User is not admin, please talk to the administrator');
+      throw new UnauthorizedException(
+        'User is not admin, please talk to the administrator',
+      );
     }
 
     // Convierte from y limite a número, o usa valores por defecto
@@ -60,7 +71,7 @@ export class EventsController {
       filters,
       user.company,
       idUser,
-      idCampaign
+      idCampaign,
     );
   }
 
@@ -85,7 +96,7 @@ export class EventsController {
       start,
       end,
       user.company,
-      idCampaign
+      idCampaign,
     );
   }
 
@@ -106,7 +117,12 @@ export class EventsController {
     @Query('limit') limit?: number,
     @Query('globalFilter') globalFilter?: string,
   ) {
-    return this.eventsService.getAttendanceList(id, page ? Number(page) : 0, limit ? Number(limit) : 100, globalFilter);
+    return this.eventsService.getAttendanceList(
+      id,
+      page ? Number(page) : 0,
+      limit ? Number(limit) : 100,
+      globalFilter,
+    );
   }
 
   @Put(':id')
@@ -117,7 +133,15 @@ export class EventsController {
   @Patch(':id/attendance')
   toggleAttendance(
     @Param('id') id: string,
-    @Body() attendanceDto: { attendeeId: string, fullName: string, email: string, phone: string, role: string, status: boolean }
+    @Body()
+    attendanceDto: {
+      attendeeId: string;
+      fullName: string;
+      email: string;
+      phone: string;
+      role: string;
+      status: boolean;
+    },
   ) {
     return this.eventsService.toggleAttendance(id, attendanceDto);
   }

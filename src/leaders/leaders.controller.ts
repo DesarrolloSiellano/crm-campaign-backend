@@ -16,15 +16,15 @@ import {
 import { LeadersService } from './leaders.service';
 import { CreateLeaderDto } from './dto/create-leader.dto';
 import { UpdateLeaderDto } from './dto/update-leader.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 import { UpdateCampaignDto } from 'src/campaigns/dto/update-campaign.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 //TODO: organizar la documentacion swagger
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(JwtAuthGuard)
 @Controller('leaders')
 export class LeadersController {
-  constructor(private readonly leadersService: LeadersService) { }
+  constructor(private readonly leadersService: LeadersService) {}
 
   @Post()
   create(@Body() createLeaderDto: CreateLeaderDto) {
@@ -45,6 +45,23 @@ export class LeadersController {
     @Body() campaign: UpdateCampaignDto,
   ) {
     return this.leadersService.updateCampaignByLeader(id, campaign);
+  }
+
+  @Post('transferCampaign')
+  transferCampaign(
+    @Req() req: any,
+    @Query('sourceCampaignId') sourceCampaignId: string,
+    @Body() targetCampaign: UpdateCampaignDto,
+  ) {
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+    return this.leadersService.transferCampaign(
+      user.company,
+      sourceCampaignId,
+      targetCampaign,
+    );
   }
 
   @Post('updateProfilePhoto')
@@ -107,6 +124,15 @@ export class LeadersController {
     return this.leadersService.findAllLeaders(idCampaign, query);
   }
 
+  @Get('findByAutocomplete')
+  findByAutocomplete(@Req() req: any, @Query('name') name: string) {
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+    return this.leadersService.findByAutocomplete(name, user.company);
+  }
+
   @Get('findById/:id')
   findOne(@Param('id') id: string) {
     return this.leadersService.findOne(id);
@@ -120,7 +146,6 @@ export class LeadersController {
     @Query('global') global?: string,
     @Query('filters') filters?: string,
   ) {
-
     const user = req.user;
 
     if (!user) {
@@ -128,12 +153,15 @@ export class LeadersController {
     }
 
     if (!user.isActived) {
-      throw new UnauthorizedException('User is not active, please talk to the administrator');
+      throw new UnauthorizedException(
+        'User is not active, please talk to the administrator',
+      );
     }
 
-
     if (!user.isAdmin) {
-      throw new UnauthorizedException('User is not admin, please talk to the administrator');
+      throw new UnauthorizedException(
+        'User is not admin, please talk to the administrator',
+      );
     }
 
     // Convierte from y limite a número, o usa valores por defecto
@@ -144,7 +172,7 @@ export class LeadersController {
       limiteNumber,
       global,
       filters,
-      user.company
+      user.company,
     );
   }
 

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import moment from 'moment';
 import { CreateLeaderDto } from './dto/create-leader.dto';
 import { UpdateLeaderDto } from './dto/update-leader.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -12,10 +13,6 @@ import { Leader } from './entities/leader.entity';
 import { Multilevel } from 'src/multilevel/entities/multilevel.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import * as generatePassword from 'generate-password';
-import { ROLES } from './helpers/roles';
-import { PERMISSIONS } from './helpers/permissions';
-import { MODULES } from './helpers/modules';
 import { UpdateCampaignDto } from 'src/campaigns/dto/update-campaign.dto';
 import { Campaign } from '../campaigns/entities/campaign.entity';
 import { HttpService } from '@nestjs/axios';
@@ -31,19 +28,69 @@ export class LeadersService {
     @InjectModel('Multilevel')
     private readonly multilevelModel: Model<Multilevel>,
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
-    private configService: ConfigService
+    private configService: ConfigService,
   ) {
     this.STORAGE_API_URL = this.configService.get('DOCUMENT_STORAGE_API')!;
   }
 
+  private async checkAndCloseCampaign(campaign: any): Promise<void> {
+    if (!campaign) return;
+
+    if (campaign.status === 'CERRADA') {
+      return;
+    }
+
+    const now = moment().startOf('day');
+    const end = campaign.endDate
+      ? moment(campaign.endDate, 'YYYY-MM-DD').endOf('day')
+      : null;
+
+    if (end && now.isAfter(end)) {
+      await this.campaignModel.updateOne(
+        { _id: campaign._id },
+        { $set: { status: 'CERRADA', updatedAt: moment().format('YYYY-MM-DD') } },
+      );
+      campaign.status = 'CERRADA';
+    }
+  }
+
+  private async checkCampaignVigency(campaignId: any) {
+    if (!campaignId) {
+      throw new BadRequestException(
+        'No hay una campaña asociada para realizar esta operación.',
+      );
+    }
+
+    const campaign = await this.campaignModel.findById(campaignId).lean();
+    if (!campaign) {
+      throw new BadRequestException('La campaña asociada no existe.');
+    }
+
+    await this.checkAndCloseCampaign(campaign);
+
+    // 1. Validar Estado
+    const statusUpper = campaign.status?.toUpperCase();
+    if (statusUpper !== 'ABIERTA' && statusUpper !== 'OPEN') {
+      throw new BadRequestException(
+        'La campaña no está vigente (está cerrada).',
+      );
+    }
+
+    // 2. Validar Fechas (usando moment para consistencia)
+    const now = moment().startOf('day');
+    const start = campaign.startDate
+      ? moment(campaign.startDate, 'YYYY-MM-DD').startOf('day')
+      : null;
+
+    if (start && now.isBefore(start)) {
+      throw new BadRequestException('La campaña aún no ha iniciado.');
+    }
+  }
+
   async create(createLeaderDto: CreateLeaderDto) {
+    await this.checkCampaignVigency(createLeaderDto.campaign?._id);
     try {
       const result = new this.leaderModel(createLeaderDto);
-      await result.save();
-
-      if (!result) {
-        throw new NotFoundException('Leader not created');
-      }
 
       const multilevelData = {
         idInvited: result._id,
@@ -63,11 +110,49 @@ export class LeadersService {
       };
 
       const resultMultilevel = new this.multilevelModel(multilevelData);
-      await resultMultilevel.save();
 
-      let response = {};
+      // Guardamos concurrentemente para optimizar el rendimiento y disminuir latencias locales
+      await Promise.all([result.save(), resultMultilevel.save()]);
 
-      if (resultMultilevel) {
+      let response: any = {
+        message: 'Leader created successfully',
+        statusCode: 201,
+        status: 'Success',
+        data: [result],
+        meta: {
+          totalData: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          idLeader: result._id,
+          idMultilevel: resultMultilevel._id,
+          multilevelMessage: 'Multilevel created successfully',
+          multilevel: resultMultilevel,
+        },
+      };
+
+      const userPayload = {
+        _id: result._id,
+        name: result.nombres,
+        lastName: result.apellidos,
+        email: result.email,
+        phone: result.celular,
+        redirectUri: createLeaderDto.redirectUri || null,
+        roles: [{ roleCode: 'LDE', roleName: 'Líder' }],
+        permissions: ['Crear', 'Editar', 'eliminar', 'Buscar'],
+        allowNameModule: 'crmCampaign',
+        allowedRoutes: ['/dashboard', '/multilevel', '/followers'],
+        company: createLeaderDto.company || 'default_company',
+        isActived: true,
+        isAdmin: false,
+        isSuperAdmin: false,
+        isNewUser: true,
+      };
+
+      const userResponse = await firstValueFrom(
+        this.userClient.send({ cmd: 'createExternalUser' }, userPayload),
+      );
+
+      if (userResponse.statusCode === 201 || userResponse.statusCode === 200) {
         response = {
           message: 'Leader created successfully',
           statusCode: 201,
@@ -81,67 +166,10 @@ export class LeadersService {
             idMultilevel: resultMultilevel._id,
             multilevelMessage: 'Multilevel created successfully',
             multilevel: resultMultilevel,
+            userMessage: 'User created successfully',
+            user: userResponse,
           },
         };
-      } else {
-        response = {
-          message: 'Leader created successfully',
-          statusCode: 207,
-          status: 'Partial Success',
-          data: [result],
-          meta: {
-            totalData: 1,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            idLeader: result._id,
-            idMultilevel: null,
-            multilevelMessage: 'Multilevel not created',
-            multilevel: null,
-          },
-        };
-      }
-
-      const userPayload = {
-        _id: result._id,
-        name: result.nombres,
-        lastName: result.apellidos,
-        email: result.email,
-        phone: result.celular,
-        redirectUri: createLeaderDto.redirectUri || null,
-        role: ROLES,
-        permissions: PERMISSIONS,
-        modules: MODULES,
-        company: createLeaderDto.company || 'default_company',
-        isActived: true,
-        isAdmin: false,
-        isSuperAdmin: false,
-        isNewUser: true,
-      };
-
-      const userResponse = await firstValueFrom(
-        this.userClient.send({ cmd: 'createUser' }, userPayload),
-      );
-
-      if (userResponse.statusCode === 201 || userResponse.statusCode === 200) {
-        {
-          response = {
-            message: 'Leader created successfully',
-            statusCode: 201,
-            status: 'Success',
-            data: [result],
-            meta: {
-              totalData: 1,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              idLeader: result._id,
-              idMultilevel: resultMultilevel._id,
-              multilevelMessage: 'Multilevel created successfully',
-              multilevel: resultMultilevel,
-              userMessage: 'User created successfully',
-              user: userResponse,
-            },
-          };
-        }
       }
 
       return response;
@@ -149,7 +177,7 @@ export class LeadersService {
       if (error.code === 11000) {
         throw new BadRequestException(
           'Duplicate key error: Leader already exists ' +
-          JSON.stringify(error.keyValue),
+            JSON.stringify(error.keyValue),
         );
       }
       throw new BadRequestException('Error creating leader: ' + error.message);
@@ -158,11 +186,15 @@ export class LeadersService {
 
   async updateCampaign(company: string, campaign: UpdateCampaignDto) {
     try {
-      const campaignResult = await this.campaignModel.findById(campaign._id);
+      const campaignResult = await this.campaignModel
+        .findById(campaign._id)
+        .lean();
 
       if (!campaignResult) {
         throw new NotFoundException('Campaign not found');
       }
+
+      await this.checkAndCloseCampaign(campaignResult);
 
       if (campaignResult.status === 'CERRADA') {
         throw new BadRequestException(
@@ -172,7 +204,7 @@ export class LeadersService {
       // Actualiza todos los líderes de la compañía con la campaña
       const result = await this.leaderModel.updateMany(
         { company: company }, // Filtro: líderes de esa compañía
-        { $set: { campaign: campaign } }, // Actualización: asignar la campaña completa u objeto
+        { $set: { campaign: campaignResult } }, // Actualización: asignar la campaña completa obtenida de base de datos
         { runValidators: true },
       );
 
@@ -200,11 +232,15 @@ export class LeadersService {
 
   async updateCampaignByLeader(_id: string, campaign: UpdateCampaignDto) {
     try {
-      const campaignResult = await this.campaignModel.findById(campaign._id);
+      const campaignResult = await this.campaignModel
+        .findById(campaign._id)
+        .lean();
 
       if (!campaignResult) {
         throw new NotFoundException('Campaign not found');
       }
+
+      await this.checkAndCloseCampaign(campaignResult);
 
       if (campaignResult.status === 'CERRADA') {
         throw new BadRequestException(
@@ -214,10 +250,11 @@ export class LeadersService {
 
       const result = await this.leaderModel.findByIdAndUpdate(
         _id, // ID del líder a actualizar
-        { $set: { campaign } }, // Asigna directamente la campaña enviada
+        { $set: { campaign: campaignResult } }, // Asigna la campaña completa de base de datos
         {
           new: true, // Devuelve el documento actualizado
           runValidators: true, // Aplica validaciones del schema
+          lean: true,
         },
       );
 
@@ -241,8 +278,95 @@ export class LeadersService {
     }
   }
 
+  async transferCampaign(
+    company: string,
+    sourceCampaignId: string,
+    targetCampaign: UpdateCampaignDto,
+  ) {
+    try {
+      const campaignResult = await this.campaignModel
+        .findById(targetCampaign._id)
+        .lean();
+
+      if (!campaignResult) {
+        throw new NotFoundException('Campaign not found');
+      }
+
+      await this.checkAndCloseCampaign(campaignResult);
+
+      if (campaignResult.status === 'CERRADA') {
+        throw new BadRequestException(
+          'No se puede transferir porque la campaña destino está cerrada',
+        );
+      }
+
+      const query: any = { company: company };
+      if (mongoose.Types.ObjectId.isValid(sourceCampaignId)) {
+        query['campaign._id'] = {
+          $in: [sourceCampaignId, new mongoose.Types.ObjectId(sourceCampaignId)],
+        };
+      } else {
+        query['campaign._id'] = sourceCampaignId;
+      }
+
+      const result = await this.leaderModel.updateMany(
+        query,
+        { $set: { campaign: campaignResult } }, // Asigna la campaña completa de base de datos
+        { runValidators: true },
+      );
+
+      return {
+        message: 'Leaders transferred successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: {
+          matched: result.matchedCount,
+          modified: result.modifiedCount,
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        'Error transferring leaders: ' + error.message,
+      );
+    }
+  }
+
+  async findByAutocomplete(autocomplete: string, company: string) {
+    try {
+      const regex = new RegExp(autocomplete, 'i');
+      const result = await this.leaderModel
+        .find({
+          company: company,
+          $or: [
+            { nombres: regex },
+            { apellidos: regex },
+            { numeroDocumento: regex },
+          ],
+        })
+        .select('_id nombres apellidos numeroDocumento celular')
+        .limit(15)
+        .lean();
+
+      if (!result) {
+        throw new NotFoundException('Leader not found by search query');
+      }
+
+      return {
+        message: 'Leaders found',
+        statusCode: 200,
+        status: 'Success',
+        data: result,
+        meta: {
+          totalData: result.length,
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException('Error finding leaders: ' + error.message);
+    }
+  }
+
   async findAll() {
-    const result = await this.leaderModel.find();
+    const result = await this.leaderModel.find().lean();
     if (!result || result.length === 0) {
       throw new NotFoundException('No leader found');
     }
@@ -258,7 +382,7 @@ export class LeadersService {
   }
 
   async findOne(id: string) {
-    const result = await this.leaderModel.findById(id);
+    const result = await this.leaderModel.findById(id).lean();
     if (!result) {
       throw new NotFoundException('Leader not found by id');
     }
@@ -274,7 +398,7 @@ export class LeadersService {
   }
 
   async findByEmail(email: string) {
-    const result = await this.leaderModel.findOne({ email: email });
+    const result = await this.leaderModel.findOne({ email: email }).lean();
     if (!result) {
       throw new NotFoundException('Leader not found by email');
     }
@@ -289,9 +413,15 @@ export class LeadersService {
     };
   }
 
-  async findByPage(from?: number, limit?: number, global?: any, filters?: any, company?: string) {
+  async findByPage(
+    from?: number,
+    limit?: number,
+    global?: any,
+    filters?: any,
+    company?: string,
+  ) {
     const query: any = {
-      company: company
+      company: company,
     };
 
     // Búsqueda global en varios campos
@@ -310,7 +440,8 @@ export class LeadersService {
     const leaders = await this.leaderModel
       .find(query)
       .skip(skipNumber)
-      .limit(limitNumber);
+      .limit(limitNumber)
+      .lean();
     const totalData = await this.leaderModel.countDocuments(query);
     return {
       statusCode: 200,
@@ -343,8 +474,7 @@ export class LeadersService {
       query.ciudad = city;
     }
 
-
-    const results = await this.leaderModel.find(query);
+    const results = await this.leaderModel.find(query).lean();
 
     // Mapear solo los campos deseados y concatenar nombre completo
     const data = results.map((geo: any) => ({
@@ -444,11 +574,17 @@ export class LeadersService {
   }
 
   async update(id: string, updateLeaderDto: UpdateLeaderDto) {
+    const existingLeader = await this.leaderModel.findById(id).lean();
+    if (!existingLeader) {
+      throw new NotFoundException('Leader not found');
+    }
+    await this.checkCampaignVigency(existingLeader.campaign?._id);
+
     try {
       const result = await this.leaderModel.findByIdAndUpdate(
         id,
         updateLeaderDto,
-        { new: true, runValidators: true },
+        { new: true, runValidators: true, lean: true },
       );
       if (!result) {
         throw new NotFoundException('Leader not found');
@@ -471,7 +607,7 @@ export class LeadersService {
       if (error.code === 11000) {
         throw new BadRequestException(
           'Duplicate key error: Leader already exists ' +
-          JSON.stringify(error.keyValue),
+            JSON.stringify(error.keyValue),
         );
       }
       throw new BadRequestException('Error updating leader: ' + error.message);
@@ -479,14 +615,22 @@ export class LeadersService {
   }
 
   async remove(id: string) {
+    const existingLeader = await this.leaderModel.findById(id).lean();
+    if (!existingLeader) {
+      throw new NotFoundException('Leader not found');
+    }
+    await this.checkCampaignVigency(existingLeader.campaign?._id);
+
     try {
-      const result = await this.leaderModel.findByIdAndDelete(id);
+      const result = await this.leaderModel.findByIdAndDelete(id).lean();
 
       const deleteFoto = await this.deleteProfileFoto(result?.uuidFoto || '');
-      const resultMultilevel = await this.multilevelModel.findOneAndDelete({
-        idInvited: id,
-        idParentLevel: id,
-      });
+      const resultMultilevel = await this.multilevelModel
+        .findOneAndDelete({
+          idInvited: id,
+          idParentLevel: id,
+        })
+        .lean();
 
       if (!result) {
         throw new NotFoundException('Leader not found');
@@ -547,7 +691,7 @@ export class LeadersService {
         originalNameFoto: externalResponse[0].original_filename,
         uuidFoto: externalResponse[0].uuid,
       },
-      { new: true },
+      { new: true, lean: true },
     );
 
     return {
@@ -563,15 +707,12 @@ export class LeadersService {
     };
   }
 
-
   async deleteProfileFoto(uuid: string) {
     const response = await firstValueFrom(
-      this.http.delete(
-        `${this.STORAGE_API_URL}/images/${uuid}`,
-      ),
+      this.http.delete(`${this.STORAGE_API_URL}/images/${uuid}`),
     );
 
-    return response.data
+    return response.data;
   }
 
   private async forwardToExternalAPI(file: Express.Multer.File): Promise<any> {
@@ -584,10 +725,7 @@ export class LeadersService {
     formData.append('images', blob, file.originalname);
 
     const response = await firstValueFrom(
-      this.http.post(
-        `${this.STORAGE_API_URL}/upload-images`,
-        formData,
-      ),
+      this.http.post(`${this.STORAGE_API_URL}/upload-images`, formData),
     );
 
     return response.data; // { url: "https://cdn.documentstorate.com/xxx.jpg" }

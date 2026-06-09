@@ -7,16 +7,20 @@ import { firstValueFrom } from 'rxjs';
 export class AuthService {
   constructor(
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
-  ) { }
+  ) {}
 
   async changePassword(changePassword: ChangePassword) {
     const userResponse = await firstValueFrom(
       this.userClient.send({ cmd: 'changePassword' }, changePassword),
     );
 
-    console.log(userResponse);
+    return userResponse;
+  }
 
-
+  async refreshAccessToken(refreshToken: string) {
+    const userResponse = await firstValueFrom(
+      this.userClient.send({ cmd: 'refreshAccessToken' }, refreshToken),
+    );
     return userResponse;
   }
 }
