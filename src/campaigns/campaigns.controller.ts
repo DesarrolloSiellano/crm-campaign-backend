@@ -43,12 +43,16 @@ export class CampaignsController {
   }
 
   @Get('findByAutocomplete')
-  findByAutocomplete(@Req() req: any, @Query('name') name: string) {
+  findByAutocomplete(
+    @Req() req: any,
+    @Query('name') name: string,
+    @Query('status') status?: string,
+  ) {
     const user = req.user;
     if (!user) {
       throw new UnauthorizedException('User not authorized');
     }
-    return this.campaignsService.findByAutocomplete(name, user.company);
+    return this.campaignsService.findByAutocomplete(name, user.company, status);
   }
 
   @Get('findByPage')

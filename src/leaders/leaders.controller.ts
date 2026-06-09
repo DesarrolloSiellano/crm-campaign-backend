@@ -47,6 +47,23 @@ export class LeadersController {
     return this.leadersService.updateCampaignByLeader(id, campaign);
   }
 
+  @Post('transferCampaign')
+  transferCampaign(
+    @Req() req: any,
+    @Query('sourceCampaignId') sourceCampaignId: string,
+    @Body() targetCampaign: UpdateCampaignDto,
+  ) {
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+    return this.leadersService.transferCampaign(
+      user.company,
+      sourceCampaignId,
+      targetCampaign,
+    );
+  }
+
   @Post('updateProfilePhoto')
   @UseInterceptors(FileInterceptor('photo')) // Sin validaciones
   async updateProfilePhoto(
@@ -105,6 +122,15 @@ export class LeadersController {
     }
 
     return this.leadersService.findAllLeaders(idCampaign, query);
+  }
+
+  @Get('findByAutocomplete')
+  findByAutocomplete(@Req() req: any, @Query('name') name: string) {
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+    return this.leadersService.findByAutocomplete(name, user.company);
   }
 
   @Get('findById/:id')

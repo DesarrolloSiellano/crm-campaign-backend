@@ -47,6 +47,7 @@ export class CampaignsService {
   }
 
   async findAll() {
+    await this.autoCloseExpiredCampaigns();
     const result = await this.campaignModel.find().lean();
     if (!result || result.length === 0) {
       throw new NotFoundException('No Campaign found');
@@ -63,6 +64,7 @@ export class CampaignsService {
   }
 
   async findByCompany(company: string) {
+    await this.autoCloseExpiredCampaigns();
     const result = await this.campaignModel.find({ company: company }).lean();
 
     if (!result) {
@@ -79,13 +81,20 @@ export class CampaignsService {
     };
   }
 
-  async findByAutocomplete(autocomplete: string, company: string) {
+  async findByAutocomplete(autocomplete: string, company: string, status?: string) {
+    await this.autoCloseExpiredCampaigns();
+    const query: any = {
+      company: company,
+      name: new RegExp(autocomplete, 'i'),
+    };
+    if (status) {
+      query.status = status;
+    }
+    
     const result = await this.campaignModel
-      .find({
-        company: company,
-        name: new RegExp(autocomplete, 'i'),
-        status: 'ABIERTA',
-      })
+      .find(query)
+      .select('_id name status startDate endDate')
+      .limit(15)
       .lean();
     if (!result) {
       throw new NotFoundException('Campaign not found by name');
@@ -96,12 +105,13 @@ export class CampaignsService {
       status: 'Success',
       data: result,
       meta: {
-        totalData: 1,
+        totalData: result.length,
       },
     };
   }
 
   async findCampaignByLeader(leaderId: string) {
+    await this.autoCloseExpiredCampaigns();
     const campaign = await this.campaignModel
       .findOne({
         status: 'ABIERTA',
@@ -124,6 +134,7 @@ export class CampaignsService {
   }
 
   async findOne(id: string) {
+    await this.autoCloseExpiredCampaigns();
     const result = await this.campaignModel.findById(id).lean();
     if (!result) {
       throw new NotFoundException('Campaign not found by id');
@@ -146,6 +157,7 @@ export class CampaignsService {
     filters?: any,
     company?: string,
   ) {
+    await this.autoCloseExpiredCampaigns();
     const query: any = {
       company: company,
     };
@@ -237,6 +249,23 @@ export class CampaignsService {
       throw new BadRequestException(
         'Error deleting Campaign: ' + error.message,
       );
+    }
+  }
+
+  private async autoCloseExpiredCampaigns(): Promise<void> {
+    try {
+      const todayStr = moment().format('YYYY-MM-DD');
+      await this.campaignModel.updateMany(
+        {
+          status: { $ne: 'CERRADA' },
+          endDate: { $lt: todayStr },
+        },
+        {
+          $set: { status: 'CERRADA', updatedAt: todayStr },
+        },
+      );
+    } catch (error) {
+      console.error('Error auto-closing expired campaigns:', error);
     }
   }
 }

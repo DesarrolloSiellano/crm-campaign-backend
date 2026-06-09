@@ -266,13 +266,22 @@ export class MultilevelService {
     global?: any,
     filters?: any,
     idParentLevel?: string,
-    company?: string,
+    user?: any,
   ) {
     const query: any = {
-      company: company,
-      idParentLevel: idParentLevel,
+      company: user.company,
       level: { $ne: 1 }, // <-- Filtro: level diferente de 1
     };
+
+    if (
+      idParentLevel &&
+      idParentLevel !== '' &&
+      idParentLevel !== 'undefined' &&
+      !user.isAdmin &&
+      !user.isSuperAdmin
+    ) {
+      query.idParentLevel = idParentLevel;
+    }
 
     // Búsqueda global en varios campos
     if (global) {

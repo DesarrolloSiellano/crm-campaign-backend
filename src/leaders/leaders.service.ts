@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import moment from 'moment';
 import { CreateLeaderDto } from './dto/create-leader.dto';
 import { UpdateLeaderDto } from './dto/update-leader.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -32,7 +33,62 @@ export class LeadersService {
     this.STORAGE_API_URL = this.configService.get('DOCUMENT_STORAGE_API')!;
   }
 
+  private async checkAndCloseCampaign(campaign: any): Promise<void> {
+    if (!campaign) return;
+
+    if (campaign.status === 'CERRADA') {
+      return;
+    }
+
+    const now = moment().startOf('day');
+    const end = campaign.endDate
+      ? moment(campaign.endDate, 'YYYY-MM-DD').endOf('day')
+      : null;
+
+    if (end && now.isAfter(end)) {
+      await this.campaignModel.updateOne(
+        { _id: campaign._id },
+        { $set: { status: 'CERRADA', updatedAt: moment().format('YYYY-MM-DD') } },
+      );
+      campaign.status = 'CERRADA';
+    }
+  }
+
+  private async checkCampaignVigency(campaignId: any) {
+    if (!campaignId) {
+      throw new BadRequestException(
+        'No hay una campaña asociada para realizar esta operación.',
+      );
+    }
+
+    const campaign = await this.campaignModel.findById(campaignId).lean();
+    if (!campaign) {
+      throw new BadRequestException('La campaña asociada no existe.');
+    }
+
+    await this.checkAndCloseCampaign(campaign);
+
+    // 1. Validar Estado
+    const statusUpper = campaign.status?.toUpperCase();
+    if (statusUpper !== 'ABIERTA' && statusUpper !== 'OPEN') {
+      throw new BadRequestException(
+        'La campaña no está vigente (está cerrada).',
+      );
+    }
+
+    // 2. Validar Fechas (usando moment para consistencia)
+    const now = moment().startOf('day');
+    const start = campaign.startDate
+      ? moment(campaign.startDate, 'YYYY-MM-DD').startOf('day')
+      : null;
+
+    if (start && now.isBefore(start)) {
+      throw new BadRequestException('La campaña aún no ha iniciado.');
+    }
+  }
+
   async create(createLeaderDto: CreateLeaderDto) {
+    await this.checkCampaignVigency(createLeaderDto.campaign?._id);
     try {
       const result = new this.leaderModel(createLeaderDto);
 
@@ -138,6 +194,8 @@ export class LeadersService {
         throw new NotFoundException('Campaign not found');
       }
 
+      await this.checkAndCloseCampaign(campaignResult);
+
       if (campaignResult.status === 'CERRADA') {
         throw new BadRequestException(
           'No se puede actualizar porque la campaña está cerrada',
@@ -146,7 +204,7 @@ export class LeadersService {
       // Actualiza todos los líderes de la compañía con la campaña
       const result = await this.leaderModel.updateMany(
         { company: company }, // Filtro: líderes de esa compañía
-        { $set: { campaign: campaign } }, // Actualización: asignar la campaña completa u objeto
+        { $set: { campaign: campaignResult } }, // Actualización: asignar la campaña completa obtenida de base de datos
         { runValidators: true },
       );
 
@@ -182,6 +240,8 @@ export class LeadersService {
         throw new NotFoundException('Campaign not found');
       }
 
+      await this.checkAndCloseCampaign(campaignResult);
+
       if (campaignResult.status === 'CERRADA') {
         throw new BadRequestException(
           'No se puede actualizar porque la campaña está cerrada',
@@ -190,7 +250,7 @@ export class LeadersService {
 
       const result = await this.leaderModel.findByIdAndUpdate(
         _id, // ID del líder a actualizar
-        { $set: { campaign } }, // Asigna directamente la campaña enviada
+        { $set: { campaign: campaignResult } }, // Asigna la campaña completa de base de datos
         {
           new: true, // Devuelve el documento actualizado
           runValidators: true, // Aplica validaciones del schema
@@ -215,6 +275,93 @@ export class LeadersService {
       throw new BadRequestException(
         'Error updating leader campaign: ' + error.message,
       );
+    }
+  }
+
+  async transferCampaign(
+    company: string,
+    sourceCampaignId: string,
+    targetCampaign: UpdateCampaignDto,
+  ) {
+    try {
+      const campaignResult = await this.campaignModel
+        .findById(targetCampaign._id)
+        .lean();
+
+      if (!campaignResult) {
+        throw new NotFoundException('Campaign not found');
+      }
+
+      await this.checkAndCloseCampaign(campaignResult);
+
+      if (campaignResult.status === 'CERRADA') {
+        throw new BadRequestException(
+          'No se puede transferir porque la campaña destino está cerrada',
+        );
+      }
+
+      const query: any = { company: company };
+      if (mongoose.Types.ObjectId.isValid(sourceCampaignId)) {
+        query['campaign._id'] = {
+          $in: [sourceCampaignId, new mongoose.Types.ObjectId(sourceCampaignId)],
+        };
+      } else {
+        query['campaign._id'] = sourceCampaignId;
+      }
+
+      const result = await this.leaderModel.updateMany(
+        query,
+        { $set: { campaign: campaignResult } }, // Asigna la campaña completa de base de datos
+        { runValidators: true },
+      );
+
+      return {
+        message: 'Leaders transferred successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: {
+          matched: result.matchedCount,
+          modified: result.modifiedCount,
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        'Error transferring leaders: ' + error.message,
+      );
+    }
+  }
+
+  async findByAutocomplete(autocomplete: string, company: string) {
+    try {
+      const regex = new RegExp(autocomplete, 'i');
+      const result = await this.leaderModel
+        .find({
+          company: company,
+          $or: [
+            { nombres: regex },
+            { apellidos: regex },
+            { numeroDocumento: regex },
+          ],
+        })
+        .select('_id nombres apellidos numeroDocumento celular')
+        .limit(15)
+        .lean();
+
+      if (!result) {
+        throw new NotFoundException('Leader not found by search query');
+      }
+
+      return {
+        message: 'Leaders found',
+        statusCode: 200,
+        status: 'Success',
+        data: result,
+        meta: {
+          totalData: result.length,
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException('Error finding leaders: ' + error.message);
     }
   }
 
@@ -427,6 +574,12 @@ export class LeadersService {
   }
 
   async update(id: string, updateLeaderDto: UpdateLeaderDto) {
+    const existingLeader = await this.leaderModel.findById(id).lean();
+    if (!existingLeader) {
+      throw new NotFoundException('Leader not found');
+    }
+    await this.checkCampaignVigency(existingLeader.campaign?._id);
+
     try {
       const result = await this.leaderModel.findByIdAndUpdate(
         id,
@@ -462,6 +615,12 @@ export class LeadersService {
   }
 
   async remove(id: string) {
+    const existingLeader = await this.leaderModel.findById(id).lean();
+    if (!existingLeader) {
+      throw new NotFoundException('Leader not found');
+    }
+    await this.checkCampaignVigency(existingLeader.campaign?._id);
+
     try {
       const result = await this.leaderModel.findByIdAndDelete(id).lean();
 

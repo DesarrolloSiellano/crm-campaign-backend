@@ -107,7 +107,7 @@ export class MultilevelController {
       global,
       filters,
       idParentLevel,
-      user.company,
+      user,
     );
   }
 
