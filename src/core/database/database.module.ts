@@ -6,6 +6,7 @@ import { PopulationSchema } from 'src/population/entities/population.entity';
 import { LeaderSchema } from 'src/leaders/entities/leader.entity';
 import { MultilevelSchema } from 'src/multilevel/entities/multilevel.entity';
 import { CampaignSchema } from 'src/campaigns/entities/campaign.entity';
+import { CampaignConfigSchema } from 'src/campaigns/entities/campaign-config.entity';
 
 @Global()
 @Module({
@@ -21,6 +22,7 @@ import { CampaignSchema } from 'src/campaigns/entities/campaign.entity';
       { name: 'Leader', schema: LeaderSchema },
       { name: 'Multilevel', schema: MultilevelSchema },
       { name: 'Campaign', schema: CampaignSchema },
+      { name: 'CampaignConfig', schema: CampaignConfigSchema },
     ]),
   ],
   exports: [MongooseModule],
