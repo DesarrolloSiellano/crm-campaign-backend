@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   Put,
-  Patch,
   Param,
   Delete,
   Query,
@@ -97,7 +96,9 @@ export class CampaignsController {
       throw new UnauthorizedException('User not authorized');
     }
     if (!user.isAdmin && !user.isSuperAdmin) {
-      throw new UnauthorizedException('Only administrators can configure the active campaign');
+      throw new UnauthorizedException(
+        'Only administrators can configure the active campaign',
+      );
     }
     return this.campaignsService.setActiveCampaign(user.company, campaignId);
   }
