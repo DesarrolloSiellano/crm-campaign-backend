@@ -18,6 +18,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ResponseInterceptor } from './core/interceptors/response.interceptor';
 import { IdempotencyModule } from './core/idempotency/idempotency.module';
 import { IdempotencyInterceptor } from './core/interceptors/idempotency.interceptor';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { IdempotencyInterceptor } from './core/interceptors/idempotency.intercep
     EventsModule,
     DigitalCardModule,
     IdempotencyModule,
+    DashboardModule,
   ],
   controllers: [AppController, ProxyController],
   providers: [
