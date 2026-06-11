@@ -476,11 +476,11 @@ export class LeadersService {
 
     const results = await this.leaderModel.find(query).lean();
 
-    // Mapear solo los campos deseados y concatenar nombre completo
     const data = results.map((geo: any) => ({
       lat: geo.lat,
       lng: geo.lng,
       nombre: `${geo.nombres} ${geo.apellidos}`.trim(), // <-- así creas 'nombre'
+      weight: Number(geo.numeroVotantes) || 1,
     }));
 
     if (!results || results.length === 0) {

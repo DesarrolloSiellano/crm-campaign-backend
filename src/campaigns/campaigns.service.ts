@@ -7,12 +7,14 @@ import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Campaign } from './entities/campaign.entity';
+import { CampaignConfig } from './entities/campaign-config.entity';
 import { Model } from 'mongoose';
 import moment from 'moment';
 @Injectable()
 export class CampaignsService {
   constructor(
     @InjectModel('Campaign') private readonly campaignModel: Model<Campaign>,
+    @InjectModel('CampaignConfig') private readonly configModel: Model<CampaignConfig>,
   ) {}
   async create(createCampaignDto: CreateCampaignDto) {
     try {
@@ -26,6 +28,9 @@ export class CampaignsService {
           status: 'Error',
         };
       }
+
+      // Cada vez que se crea una campaña, se auto-configura como activa por defecto
+      await this.setActiveCampaign(createCampaignDto.company, result._id.toString());
 
       return {
         message: 'Campaign created successfully',
@@ -266,6 +271,55 @@ export class CampaignsService {
       );
     } catch (error) {
       console.error('Error auto-closing expired campaigns:', error);
+    }
+  }
+
+  async setActiveCampaign(company: string, campaignId: string) {
+    try {
+      const config = await this.configModel.findOneAndUpdate(
+        { company },
+        { campaign: campaignId },
+        { upsert: true, new: true, runValidators: true }
+      );
+      
+      const campaign = await this.campaignModel.findById(campaignId).lean();
+      
+      return {
+        message: 'Active campaign configured successfully',
+        statusCode: 200,
+        status: 'Success',
+        data: campaign,
+      };
+    } catch (error) {
+      throw new BadRequestException('Error setting active campaign: ' + error.message);
+    }
+  }
+
+  async getActiveCampaign(company: string) {
+    try {
+      const config = await this.configModel.findOne({ company }).populate('campaign').lean();
+      if (!config || !config.campaign) {
+        // Buscar la campaña abierta o más reciente como fallback por defecto
+        const firstCampaign = await this.campaignModel.findOne({ company, status: 'ABIERTA' }).sort({ createdAt: -1 }).lean();
+        if (firstCampaign) {
+          await this.configModel.create({ company, campaign: firstCampaign._id });
+          return {
+            message: 'Active campaign loaded (default)',
+            statusCode: 200,
+            status: 'Success',
+            data: firstCampaign,
+          };
+        }
+        throw new NotFoundException('No active campaign configured and no default campaign found');
+      }
+      return {
+        message: 'Active campaign config loaded',
+        statusCode: 200,
+        status: 'Success',
+        data: config.campaign,
+      };
+    } catch (error) {
+      throw new BadRequestException('Error loading active campaign: ' + error.message);
     }
   }
 }

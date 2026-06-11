@@ -14,10 +14,13 @@ export class DashboardService {
     @InjectModel('Event') private readonly eventModel: Model<Event>,
   ) {}
 
-  async getStats(company: string, idCampaign: string, limitLeaders = 5) {
+  async getStats(company: string, idCampaign: string, limitLeaders = 5, user?: any) {
     if (!idCampaign) {
       throw new BadRequestException('El idCampaign es requerido');
     }
+
+    const isAdmin = user ? (user.isAdmin || user.isSuperAdmin) : true;
+    const leaderId = !isAdmin ? user._id : null;
 
     const campaignMatch: any = mongoose.Types.ObjectId.isValid(idCampaign)
       ? { $in: [idCampaign, new mongoose.Types.ObjectId(idCampaign)] }
@@ -25,6 +28,40 @@ export class DashboardService {
 
     const sevenDaysAgo = moment().subtract(7, 'days').format('YYYY-MM-DD');
     const today = moment().format('YYYY-MM-DD');
+
+    // Filtros base y condicionales según el rol
+    const followerQuery: any = {
+      company,
+      level: { $ne: 1 },
+      'campaign._id': campaignMatch,
+    };
+
+    const newFollowerQuery: any = {
+      company,
+      level: { $ne: 1 },
+      'campaign._id': campaignMatch,
+      createdDate: { $gte: sevenDaysAgo },
+    };
+
+    const leaderMatchQuery: any = {
+      company,
+      'campaign._id': campaignMatch,
+    };
+
+    const eventQuery: any = {
+      company,
+      'campaign._id': campaignMatch,
+      date: { $gte: today },
+    };
+
+    // Aplicar segmentación para no-administradores (líderes)
+    if (!isAdmin && leaderId) {
+      const leaderMongoId = new mongoose.Types.ObjectId(leaderId);
+      followerQuery.idParentLevel = leaderMongoId;
+      newFollowerQuery.idParentLevel = leaderMongoId;
+      leaderMatchQuery._id = leaderMongoId;
+      eventQuery.idUserCreation = leaderId; // Eventos creados por el líder
+    }
 
     // Ejecutamos consultas de forma paralela para mayor eficiencia
     const [
@@ -34,35 +71,23 @@ export class DashboardService {
       rankingLeaders,
       upcomingEvents,
     ] = await Promise.all([
-      // 1. Total de líderes
-      this.leaderModel.countDocuments({
-        company,
-        'campaign._id': campaignMatch,
-      }),
+      // 1. Total de líderes (si es líder, ve solo 1 - él mismo)
+      isAdmin
+        ? this.leaderModel.countDocuments({
+            company,
+            'campaign._id': campaignMatch,
+          })
+        : Promise.resolve(1),
 
-      // 2. Total de seguidores (excluyendo a los propios líderes de nivel 1)
-      this.multilevelModel.countDocuments({
-        company,
-        level: { $ne: 1 },
-        'campaign._id': campaignMatch,
-      }),
+      // 2. Total de seguidores
+      this.multilevelModel.countDocuments(followerQuery),
 
       // 3. Seguidores nuevos en los últimos 7 días
-      this.multilevelModel.countDocuments({
-        company,
-        level: { $ne: 1 },
-        'campaign._id': campaignMatch,
-        createdDate: { $gte: sevenDaysAgo },
-      }),
+      this.multilevelModel.countDocuments(newFollowerQuery),
 
       // 4. Ranking de líderes por cantidad de seguidores agregados
       this.leaderModel.aggregate([
-        {
-          $match: {
-            company,
-            'campaign._id': campaignMatch,
-          },
-        },
+        { $match: leaderMatchQuery },
         {
           $lookup: {
             from: 'multilevels',
@@ -96,11 +121,7 @@ export class DashboardService {
 
       // 5. Los 3 próximos eventos
       this.eventModel
-        .find({
-          company,
-          'campaign._id': campaignMatch,
-          date: { $gte: today },
-        })
+        .find(eventQuery)
         .sort({ date: 1, startTime: 1 })
         .limit(3)
         .lean(),

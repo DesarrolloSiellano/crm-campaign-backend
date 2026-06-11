@@ -19,7 +19,9 @@ import { ResponseInterceptor } from './core/interceptors/response.interceptor';
 import { IdempotencyModule } from './core/idempotency/idempotency.module';
 import { IdempotencyInterceptor } from './core/interceptors/idempotency.interceptor';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ReportsModule } from './reports/reports.module';
 
+// Registered modules for CRM
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -38,6 +40,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     DigitalCardModule,
     IdempotencyModule,
     DashboardModule,
+    ReportsModule,
   ],
   controllers: [AppController, ProxyController],
   providers: [

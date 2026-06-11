@@ -81,6 +81,27 @@ export class CampaignsController {
     );
   }
 
+  @Get('active-config')
+  getActiveCampaign(@Req() req: any) {
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+    return this.campaignsService.getActiveCampaign(user.company);
+  }
+
+  @Post('active-config')
+  setActiveCampaign(@Req() req: any, @Body('campaignId') campaignId: string) {
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedException('User not authorized');
+    }
+    if (!user.isAdmin && !user.isSuperAdmin) {
+      throw new UnauthorizedException('Only administrators can configure the active campaign');
+    }
+    return this.campaignsService.setActiveCampaign(user.company, campaignId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.campaignsService.findOne(id);
